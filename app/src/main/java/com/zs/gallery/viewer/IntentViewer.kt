@@ -35,9 +35,6 @@ import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
@@ -52,7 +49,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
-import com.zs.compose.theme.AppTheme
 import com.zs.compose.theme.IconButton
 import com.zs.compose.theme.LocalWindowSize
 import com.zs.compose.theme.WindowSize.Category
@@ -93,7 +89,6 @@ private const val TAG = "IntentViewer"
  */
 @Composable
 private fun BlockedVideo(uri: Uri, durationMs: Long, limitMs: Long) {
-    val facade = LocalSystemFacade.current
     val navController = LocalNavController.current
     Scaffold(
         containerColor = Color.Black,
@@ -120,7 +115,6 @@ private fun BlockedVideo(uri: Uri, durationMs: Long, limitMs: Long) {
             androidx.compose.material3.Text(
                 text = "Video blocked",
                 color = Color.White,
-                style = AppTheme.typography.headlineSmall
             )
             androidx.compose.material3.Text(
                 text = if (durationMs > 0) {
