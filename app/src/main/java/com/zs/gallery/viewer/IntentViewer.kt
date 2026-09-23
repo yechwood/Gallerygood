@@ -116,18 +116,18 @@ private fun BlockedVideo(uri: Uri, durationMs: Long, limitMs: Long) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
         ) {
-            androidx.compose.material3.Text(
+            BasicText(
                 text = "Video blocked",
-                color = Color.White,
+                style = TextStyle(color = Color.White),
             )
-            androidx.compose.material3.Text(
+            BasicText(
                 text = if (durationMs > 0) {
                     "This video is " + VideoRestriction.format(durationMs) +
                         " long and exceeds the " + VideoRestriction.format(limitMs) + " limit."
                 } else {
                     "This video could not be verified, so it was not played."
                 },
-                color = Color.LightGray,
+                style = TextStyle(color = Color.LightGray),
                 modifier = Modifier.padding(24.dp)
             )
         }
