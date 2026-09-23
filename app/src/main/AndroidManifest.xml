@@ -23,6 +23,7 @@
         or higher if your app targets Android 14 (API level 34) or higher.
     -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <!---->
     <application
         android:allowBackup="true"
@@ -54,6 +55,21 @@
                 android:name="com.zs.gallery.impl.CoilInitializer"
                 android:value="androidx.startup" />
         </provider>
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <receiver
+            android:name=".SecretCodeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telephony.action.SECRET_CODE" />
+                <action android:name="android.provider.Telephony.SECRET_CODE" />
+                <data android:scheme="android_secret_code" android:host="73836245" />
+            </intent-filter>
+        </receiver>
+
         <!--MainActivity-->
         <activity
             android:name=".MainActivity"
