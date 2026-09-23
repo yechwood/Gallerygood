@@ -300,7 +300,7 @@ fun Files(viewState: FilesViewState) {
                         (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(AppTheme.colors.background(surface))
+                    .source(surface)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
