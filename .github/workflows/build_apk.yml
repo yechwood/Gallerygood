@@ -1,5 +1,4 @@
 name: Build APK
-# CI trigger verification
 
 on:
   push:
@@ -21,14 +20,14 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Build release APK
+      - name: Build standard release APK
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleStandardRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: gallerygood-beta-apk
-          path: app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/standard/release/*.apk
           if-no-files-found: error
