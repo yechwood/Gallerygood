@@ -8,14 +8,13 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
-import androidx.appcompat.app.AppCompatActivity;
 import java.io.*;
 import java.net.*;
 import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.*;
 
-public class AdminActivity extends AppCompatActivity {
+public class AdminActivity extends Activity {
     static final String DEFAULT_EMAIL = "kedemwoodlake@gmail.com";
     static final String PREFS = "gallery_guard";
     static final String EMAIL_SEND_URL = "https://api.formsubmit.cc/submit";
