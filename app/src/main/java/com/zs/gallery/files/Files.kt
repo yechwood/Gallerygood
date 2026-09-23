@@ -86,7 +86,6 @@ import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.OverflowMenu
 import com.zs.gallery.common.compose.background
 import com.zs.gallery.common.compose.emit
-import com.zs.gallery.common.compose.fadingEdge2
 import com.zs.gallery.common.compose.preference
 import com.zs.gallery.common.compose.rememberAcrylicSurface
 import com.zs.gallery.common.compose.section
@@ -280,7 +279,6 @@ fun Files(viewState: FilesViewState) {
                                     else -> 0
                                 },
                                 modifier = Modifier
-                                    .animateItem()
                                     .then(RouteFiles.sharedElement(item.id))
                                     .then(clickable)
                             )
@@ -294,16 +292,15 @@ fun Files(viewState: FilesViewState) {
             // Content
             LazyVerticalGrid(
                 state = state,
-                columns = GridCells.Adaptive(Settings.STANDARD_TILE_SIZE * multiplier),
-                horizontalArrangement = CP.SmallArrangement,
-                verticalArrangement = CP.SmallArrangement,
+                columns = GridCells.Fixed(if (compact) 3 else 4),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
                 contentPadding = (inAppNavInsets.add(WindowInsets.content)
                     .union(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))).asPaddingValues() +
-                        (Padding(end = if (!compact) CP.large else 0.dp) + Padding(horizontal = CP.medium)),
+                        (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
-                    .fadingEdge2(length = 56.dp)
-                    .source(surface)
+                    .background(AppTheme.colors.background(surface))
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
