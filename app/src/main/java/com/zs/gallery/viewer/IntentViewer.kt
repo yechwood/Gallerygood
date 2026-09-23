@@ -33,6 +33,10 @@ import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
@@ -71,6 +75,8 @@ import com.zs.gallery.common.compose.source
 import com.zs.gallery.common.icons.NearbyShare
 import com.zs.gallery.common.scaledInsideAndCenterAlignedFrom
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
@@ -85,11 +91,80 @@ private const val TAG = "IntentViewer"
  * Represents the media player screen for playing local/non-local media files.
  */
 @Composable
+private fun BlockedVideo(uri: Uri, durationMs: Long, limitMs: Long) {
+    val facade = LocalSystemFacade.current
+    val navController = LocalNavController.current
+    Scaffold(
+        containerColor = Color.Black,
+        topBar = {
+            MediaViewerTopAppBar(
+                visible = true,
+                "",
+                rememberAcrylicSurface(),
+                navigationIcon = {
+                    IconButton(
+                        Icons.AutoMirrored.Outlined.ReplyAll,
+                        contentDescription = "Back",
+                        onClick = { navController.navigateUp() }
+                    )
+                }
+            )
+        }
+    ) {
+        androidx.compose.foundation.layout.Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+        ) {
+            androidx.compose.material3.Text(
+                text = "Video blocked",
+                color = Color.White,
+                style = AppTheme.typography.headlineSmall
+            )
+            androidx.compose.material3.Text(
+                text = if (durationMs > 0) {
+                    "This video is " + VideoRestriction.format(durationMs) +
+                        " long and exceeds the " + VideoRestriction.format(limitMs) + " limit."
+                } else {
+                    "This video could not be verified, so it was not played."
+                },
+                color = Color.LightGray,
+                modifier = Modifier.padding(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun MediaPlayer(uri: Uri) {
-    // Create a PlayerController instance.
-    val controller =
-        Controller(true, true)
-    // Display the video using PlayerView.
+    val context = LocalContext.current
+    var result by remember(uri) { mutableStateOf<VideoRestriction.Result?>(null) }
+
+    LaunchedEffect(uri) {
+        result = withContext(Dispatchers.IO) {
+            VideoRestriction.check(context, uri)
+        }
+    }
+
+    val checked = result
+    if (checked == null) {
+        Scaffold(containerColor = Color.Black) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.CircularProgressIndicator()
+            }
+        }
+        return
+    }
+
+    if (!checked.allowed) {
+        BlockedVideo(uri, checked.durationMs, checked.limitMs)
+        return
+    }
+
+    val controller = Controller(true, true)
     PlayerView(
         controller,
         Modifier.fillMaxSize(),
@@ -98,24 +173,14 @@ private fun MediaPlayer(uri: Uri) {
         true
     )
     val facade = LocalSystemFacade.current
-    // Use DisposableEffect to manage resources that need to be set up and torn down.
-    DisposableEffect(key1 = Unit) {
-        // This block runs when the composable is first displayed.
-        //facade.enableEdgeToEdge(dark = false, translucent = false)
-        // Store the original window style to restore it later.
+
+    DisposableEffect(uri) {
         val original = facade.style
-        // Hide the system bars (status bar and navigation bar) for a full-screen video experience.
         facade.style = original + WindowStyle.FLAG_SYSTEM_BARS_HIDDEN
-        // Set the media item (the video URI) to the controller.
-        // Prepare the player for playback.
-        // Start playing the video.
         controller.setMediaItem(uri)
         controller.prepare()
         controller.play(true)
-        // This block runs when the composable leaves the composition (e.g., the screen is closed).
         onDispose {
-            // Reset to default on disposal
-            // Release the player resources to prevent memory leaks.
             facade.style = original
             controller.release()
         }
