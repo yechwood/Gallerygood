@@ -404,95 +404,6 @@ private inline fun LazyListScope.Appearence(
 }
 
 @Composable
-private fun Sponsor(modifier: Modifier = Modifier) {
-    BaseListItem(
-        modifier = modifier
-            .offset(y = -CP.normal)
-            .background(AppTheme.colors.tileBackgroundColor, SingleTileShape),
-        centerAlign = true,
-        contentColor = AppTheme.colors.onBackground,
-        // App name.
-        overline = {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = AppTheme.typography.display3,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.DancingScriptFontFamily,
-                color = AppTheme.colors.onBackground
-            )
-        },
-        // Build version info.
-        heading = {
-            val ctx = LocalContext.current
-            Text(
-                text = textResource(
-                    R.string.pref_scr_version_by_author_s,
-                    ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: ""
-                ),
-                style = AppTheme.typography.label3,
-                fontWeight = FontWeight.Normal
-            )
-        },
-        // app icon
-        leading = {
-            Surface(
-                color = AppTheme.colors.background(4.dp),
-                shape = AppTheme.shapes.large,
-                modifier = Modifier.size(64.dp),
-                content = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = null,
-                        tint = Color.Unspecified
-                    )
-                }
-            )
-        },
-        // RateUs + Buy me a Coffee Button.
-        footer = {
-            Row(
-                modifier = Modifier.padding(top = CP.normal),
-                horizontalArrangement = Arrangement.spacedBy(CP.normal),
-                verticalAlignment = Alignment.CenterVertically,
-                content = {
-                    val facade = LocalSystemFacade.current
-
-                    // RateUs
-                    FilledTonalButton(
-                        stringResource(R.string.rate_us),
-                        icon = Icons.Outlined.RateReview,
-                        onClick = {
-                            if (BuildConfig.FLAVOR != BuildConfig.FLAVOR_COMMUNITY)
-                                facade.launchAppStore()
-                            else
-                                facade.launch(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/iZakirSheikh/Gallery")))
-                        },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            backgroundColor = AppTheme.colors.background(
-                                4.dp
-                            )
-                        )
-                    )
-
-                    // Coffee
-                    Button(
-                        stringResource(R.string.buy_me_a_coffee),
-                        icon = Icons.Outlined.DataObject,
-                        onClick = {
-                            when(BuildConfig.FLAVOR){
-                                BuildConfig.FLAVOR_COMMUNITY -> facade.launch(Intent(Intent.ACTION_VIEW,
-                                    Uri.parse("https://github.com/sponsors/iZakirSheikh")))
-                                else -> facade.initiatePurchaseFlow(Paymaster.IAP_BUY_ME_COFFEE)
-                            }
-                        },
-                    )
-                }
-            )
-        }
-    )
-}
-
-@Composable
 @NonRestartableComposable
 private fun ColumnScope.AboutUs() {
     // The app version and check for updates.
@@ -673,12 +584,7 @@ fun Settings(viewState: SettingsViewState) {
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                     .fadingEdge2(length = 56.dp),
                 content = {
-                    //Sponsor
-                    item(contentType = "sponsor") {
-                        Sponsor()
-                    }
-
-                    // General
+// General
                     item(contentType = CONTENT_TYPE_HEADER) {
                         GroupHeader(
                             text = stringResource(id = R.string.general),
