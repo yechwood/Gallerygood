@@ -22,6 +22,7 @@ package com.zs.gallery.files
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -293,13 +294,14 @@ fun Files(viewState: FilesViewState) {
             LazyVerticalGrid(
                 state = state,
                 columns = GridCells.Fixed(if (compact) 3 else 4),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
                 contentPadding = (inAppNavInsets.add(WindowInsets.content)
                     .union(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))).asPaddingValues() +
                         (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.White)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
