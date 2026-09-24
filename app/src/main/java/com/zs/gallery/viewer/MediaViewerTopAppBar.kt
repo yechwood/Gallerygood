@@ -29,7 +29,6 @@ import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.zs.compose.foundation.Background
 import com.zs.compose.foundation.SignalWhite
@@ -83,7 +82,6 @@ fun MediaViewerTopAppBar(
                 Text(
                     title,
                     maxLines = 2,
-                    fontFamily = FontFamily.Monospace,
                     style = AppTheme.typography.title3
                 )
             },
