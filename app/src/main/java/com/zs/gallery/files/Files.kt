@@ -187,7 +187,6 @@ fun Files(viewState: FilesViewState) {
             FloatingActionMenu(
                 visible = viewState.isInSelectionMode,
                 background = colors.background(surface),
-                plainWhite = true,
                 contentColor = Color(0xFF202124),
                 modifier = Modifier.windowInsetsPadding(
                     (if (compact) inAppNavInsets else WindowInsets.None).union(WindowInsets.systemBars)
