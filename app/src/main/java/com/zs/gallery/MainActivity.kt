@@ -35,7 +35,6 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.NonRestartableComposable
@@ -44,7 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
@@ -56,15 +55,11 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.zs.compose.foundation.getText2
-import com.zs.compose.foundation.runCatching
 import com.zs.compose.theme.snackbar.SnackbarDuration
 import com.zs.compose.theme.snackbar.SnackbarHostState
-import com.zs.compose.theme.snackbar.SnackbarResult
-import com.zs.core.billing.Paymaster
 import com.zs.core.billing.Product
 import com.zs.core.billing.Purchase
 import com.zs.core.common.showPlatformToast
-import com.zs.core.getPackageInfoCompat
 import com.zs.gallery.common.SystemFacade
 import com.zs.gallery.common.WindowStyle
 import com.zs.gallery.common.domain
@@ -334,82 +329,14 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     override fun launch(intent: Intent, options: Bundle?) =
         startActivity(intent, options)
 
-    override fun initiateUpdateFlow(report: Boolean) {
-        val manager = AppMarketManager()
-        lifecycleScope.launch {
-            manager.initiateUpdateFlow(this@MainActivity){result ->
-                return@initiateUpdateFlow  when(result){
-                    AppMarketManager.UPDATE_NOT_AVAILABLE -> {
-                        if (report) showToast(R.string.msg_update_not_available)
-                        AppMarketManager.ACTION_IGNORE
-                    }
+    // Standalone build: update, review, and purchase flows are intentionally disabled.
+    override fun initiateUpdateFlow(report: Boolean) = Unit
 
-                    AppMarketManager.UPDATE_NOT_SUPPORTED -> {
-                        /*No-op*/
-                        AppMarketManager.ACTION_IGNORE
-                    }
+    override fun initiateReviewFlow() = Unit
 
-                    AppMarketManager.UPDATE_DOWNLOADED -> {
-                        // else show the toast.
-                        val res = snackbarHostState.showSnackbar(
-                            message = resources.getText2(R.string.msg_new_update_downloaded),
-                            action = resources.getText2(R.string.install),
-                            duration = SnackbarDuration.Long,
-                            icon = Icons.Outlined.NewReleases
-                        )
-                        // complete update when ever user clicks on action.
-                        if (res == SnackbarResult.ActionPerformed) AppMarketManager.ACTION_INSTALL
-                        else AppMarketManager.ACTION_IGNORE
-                    }
-                    // progress
-                    else -> {
-                        inAppUpdateProgress = result
-                        Log.d(TAG, "initiateUpdateFlow: $result")
-                        AppMarketManager.ACTION_IGNORE
-                    }
-                }
-            }
-        }
-    }
+    override fun initiatePurchaseFlow(id: String): Boolean = false
 
-    override fun initiateReviewFlow() {
-        lifecycleScope.launch {
-            // Get the app launch count from preferences.
-            val count = preferences[Settings.KEY_LAUNCH_COUNTER]
-            // Check if the minimum launch count has been reached.
-            if (count < MIN_LAUNCHES_BEFORE_REVIEW)
-                return@launch
-            // Get the first install time of the app.
-            // Check if enough time has passed since the first install.
-            val firstInstallTime =
-                packageManager.getPackageInfoCompat(packageName)?.firstInstallTime
-                    ?: 0
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - firstInstallTime < INITIAL_REVIEW_DELAY.inWholeMilliseconds)
-                return@launch
-            // Get the last time the review prompt was shown.
-            // Check if enough time has passed since the last review prompt.
-            val lastAskedTime = preferences[KEY_LAST_REVIEW_TIME]
-            if (currentTime - lastAskedTime <= STANDARD_REVIEW_DELAY.inWholeMilliseconds)
-                return@launch
-
-            // Request and launch the review flow.
-            runCatching(TAG) {
-                val reviewManager = AppMarketManager()
-                // Update the last asked time in preferences
-                preferences[KEY_LAST_REVIEW_TIME] = System.currentTimeMillis()
-                reviewManager.initiateReviewFlow(this@MainActivity)
-                // Optionally log an event to Firebase Analytics.
-                // host.fAnalytics.logReviewPromptShown()
-            }
-        }
-    }
-
-    override fun initiatePurchaseFlow(id: String) =
-        paymaster.initiatePurchaseFlow(this, id)
-
-    override fun getProductInfo(id: String): Product? =
-        paymaster.details.value.find { it.id == id }
+    override fun getProductInfo(id: String): Product? = null
 
     override fun onDestinationChanged(cont: NavController, dest: NavDestination, args: Bundle?) = Unit
 
