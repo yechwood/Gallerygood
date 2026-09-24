@@ -96,7 +96,7 @@ fun FloatingActionMenu(
             Surface(
                 background = background,
                 contentColor = contentColor,
-                elevation = 12.dp,
+                elevation = 0.dp,
                 shape = CircleShape,
                 border = border,
                 content = {
