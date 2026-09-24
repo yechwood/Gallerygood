@@ -134,7 +134,7 @@ fun Files(viewState: FilesViewState) {
             val (icon, title) = viewState.meta
             FloatingLargeTopAppBar(
                 title = { Label(title, maxLines = 2) },
-                background = Color.White,
+                background = colors.background(surface),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
                 navigationIcon = {
@@ -300,7 +300,7 @@ fun Files(viewState: FilesViewState) {
                         (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
-                     .background(Color.White)
+                    .background(Color.White)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
