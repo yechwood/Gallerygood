@@ -41,7 +41,7 @@ jobs:
               -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
           fi
-          UNSIGNED="app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk"
+          UNSIGNED=$(find app/build/outputs/apk/standard/release -maxdepth 1 -name "*.apk" -type f | head -n 1)
           SIGNED="app/build/outputs/apk/standard/release/Gallerygood-recovered.apk"
           "$APKSIGNER" sign \
             --ks ~/.android/gallerygood-debug.keystore \
