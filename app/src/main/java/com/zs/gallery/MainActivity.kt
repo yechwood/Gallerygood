@@ -35,10 +35,6 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Coffee
-import androidx.compose.material.icons.outlined.GetApp
-import androidx.compose.material.icons.outlined.NewReleases
-import androidx.compose.material.icons.outlined.Store
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.NonRestartableComposable
@@ -47,7 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
@@ -58,28 +54,15 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.zs.compose.foundation.Amber
 import com.zs.compose.foundation.getText2
-import com.zs.compose.foundation.runCatching
 import com.zs.compose.theme.snackbar.SnackbarDuration
 import com.zs.compose.theme.snackbar.SnackbarHostState
-import com.zs.compose.theme.snackbar.SnackbarResult
-import com.zs.core.BuildConfig
-import com.zs.core.analytics.Analytics
-import com.zs.core.billing.Paymaster
 import com.zs.core.billing.Product
 import com.zs.core.billing.Purchase
-import com.zs.core.billing.purchased
 import com.zs.core.common.showPlatformToast
-import com.zs.core.getPackageInfoCompat
-import com.zs.core.market.AppMarketManager
-import com.zs.gallery.common.IAP_BUY_ME_COFFEE
 import com.zs.gallery.common.SystemFacade
 import com.zs.gallery.common.WindowStyle
 import com.zs.gallery.common.domain
-import com.zs.gallery.common.isInstalledFromPlayStore
-import com.zs.gallery.common.isPlayStoreAvailable
-import com.zs.gallery.common.products
 import com.zs.gallery.files.RouteFiles
 import com.zs.gallery.lockscreen.RouteLockScreen
 import com.zs.gallery.settings.Settings
@@ -92,11 +75,9 @@ import com.zs.preferences.intPreferenceKey
 import com.zs.preferences.longPreferenceKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen as configSplashScreen
 import androidx.navigation.NavController.OnDestinationChangedListener as NavDestListener
@@ -104,27 +85,6 @@ import androidx.navigation.NavController.OnDestinationChangedListener as NavDest
 private const val TAG = "MainActivity"
 
 // Minimum number of app launches before prompting for a review.
-private const val MIN_LAUNCHES_BEFORE_REVIEW = 5
-
-// Number of days to wait before showing the first review prompt.
-private val INITIAL_REVIEW_DELAY = 1.days
-
-// The maximum number of distinct promotional messages to display to the user.
-private val MAX_PROMO_MESSAGES = 2
-
-// The number of app launches to skip between showing consecutive promotional messages.
-// After each promotional message is shown, the app will skip this many launches before
-// potentially showing another promotional message.
-private val PROMO_SKIP_LAUNCHES = 30
-
-
-// Minimum number of days between subsequent review prompts.
-// Since we cannot confirm if the user actually left a review, we use this interval
-// to avoid prompting too frequently.
-private val STANDARD_REVIEW_DELAY = 5.days
-private val KEY_LAST_REVIEW_TIME = longPreferenceKey(TAG + "_last_review_time", 0)
-private val KEY_APP_VERSION_CODE = intPreferenceKey(TAG + "_app_version_code", -1)
-
 @Composable
 private inline fun <S, O> Preferences.observeAsState(key: Key<S, O>): State<O?> {
     val flow = when (key) {
@@ -152,11 +112,7 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     private val preferences: Preferences by inject()
     private var navController: NavHostController? = null
 
-    private val paymaster by lazy {
-        Paymaster(this, BuildConfig.PLAY_CONSOLE_APP_RSA_KEY, Paymaster.products)
-    }
-
-    var _style: Int by mutableIntStateOf(WindowStyle.FLAG_STYLE_AUTO)
+        var _style: Int by mutableIntStateOf(WindowStyle.FLAG_STYLE_AUTO)
     override var style: WindowStyle
         get() = WindowStyle(_style)
         set(value) { _style = value.value }
@@ -217,7 +173,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     @SuppressLint("NewApi")
     override fun onResume() {
         super.onResume()
-        paymaster.sync()
         Log.d(TAG, "onStart")
         // Only navigate to the lock screen if authentication is required and
         // this is not a fresh app start.
@@ -239,7 +194,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     }
 
     override fun onDestroy() {
-        paymaster.release()
         super.onDestroy()
     }
 
@@ -370,155 +324,21 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
 
     @Composable
     @NonRestartableComposable
-    override fun observePurchaseAsState(id: String): State<Purchase?> {
-        return produceState(remember(id) { paymaster.purchases.value.find { it.id == id } }) {
-            paymaster.purchases.map { it.find { it.id == id } }.collect {
-                value = it  // updating purchase
-            }
-        }
-    }
+    override fun observePurchaseAsState(id: String): State<Purchase?> = remember { mutableStateOf(null) }
 
     override fun launch(intent: Intent, options: Bundle?) =
         startActivity(intent, options)
 
-    override fun initiateUpdateFlow(report: Boolean) {
-        val manager = AppMarketManager()
-        lifecycleScope.launch {
-            manager.initiateUpdateFlow(this@MainActivity){result ->
-                return@initiateUpdateFlow  when(result){
-                    AppMarketManager.UPDATE_NOT_AVAILABLE -> {
-                        if (report) showToast(R.string.msg_update_not_available)
-                        AppMarketManager.ACTION_IGNORE
-                    }
+    // Standalone build: update, review, and purchase flows are intentionally disabled.
+    override fun initiateUpdateFlow(report: Boolean) = Unit
 
-                    AppMarketManager.UPDATE_NOT_SUPPORTED -> {
-                        /*No-op*/
-                        AppMarketManager.ACTION_IGNORE
-                    }
+    override fun initiateReviewFlow() = Unit
 
-                    AppMarketManager.UPDATE_DOWNLOADED -> {
-                        // else show the toast.
-                        val res = snackbarHostState.showSnackbar(
-                            message = resources.getText2(R.string.msg_new_update_downloaded),
-                            action = resources.getText2(R.string.install),
-                            duration = SnackbarDuration.Long,
-                            icon = Icons.Outlined.NewReleases
-                        )
-                        // complete update when ever user clicks on action.
-                        if (res == SnackbarResult.ActionPerformed) AppMarketManager.ACTION_INSTALL
-                        else AppMarketManager.ACTION_IGNORE
-                    }
-                    // progress
-                    else -> {
-                        inAppUpdateProgress = result
-                        Log.d(TAG, "initiateUpdateFlow: $result")
-                        AppMarketManager.ACTION_IGNORE
-                    }
-                }
-            }
-        }
-    }
+    override fun initiatePurchaseFlow(id: String): Boolean = false
 
-    override fun initiateReviewFlow() {
-        lifecycleScope.launch {
-            // Get the app launch count from preferences.
-            val count = preferences[Settings.KEY_LAUNCH_COUNTER]
-            // Check if the minimum launch count has been reached.
-            if (count < MIN_LAUNCHES_BEFORE_REVIEW)
-                return@launch
-            // Get the first install time of the app.
-            // Check if enough time has passed since the first install.
-            val firstInstallTime =
-                packageManager.getPackageInfoCompat(packageName)?.firstInstallTime
-                    ?: 0
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - firstInstallTime < INITIAL_REVIEW_DELAY.inWholeMilliseconds)
-                return@launch
-            // Get the last time the review prompt was shown.
-            // Check if enough time has passed since the last review prompt.
-            val lastAskedTime = preferences[KEY_LAST_REVIEW_TIME]
-            if (currentTime - lastAskedTime <= STANDARD_REVIEW_DELAY.inWholeMilliseconds)
-                return@launch
+    override fun getProductInfo(id: String): Product? = null
 
-            // Request and launch the review flow.
-            runCatching(TAG) {
-                val reviewManager = AppMarketManager()
-                // Update the last asked time in preferences
-                preferences[KEY_LAST_REVIEW_TIME] = System.currentTimeMillis()
-                reviewManager.initiateReviewFlow(this@MainActivity)
-                // Optionally log an event to Firebase Analytics.
-                // host.fAnalytics.logReviewPromptShown()
-            }
-        }
-    }
-
-    override fun initiatePurchaseFlow(id: String) =
-        paymaster.initiatePurchaseFlow(this, id)
-
-    override fun getProductInfo(id: String): Product? =
-        paymaster.details.value.find { it.id == id }
-
-    override fun onDestinationChanged(
-        cont: NavController,
-        dest: NavDestination,
-        args: Bundle?,
-    ) {
-        Analytics.getInstance().logEvent(Analytics.EVENT_SCREEN_VIEW) {  // Log the event.
-            // create params for the event.
-            val domain = dest.domain ?: "unknown"
-            putString(Analytics.PARAM_SCREEN_NAME, domain)
-        }
-    }
-
-    private fun showPromoToast(
-        index: Int,
-        delay: Long = 5_000,
-    ) {
-        // This function is designed to display promotional messages identified by index.
-        // - An index of 0 indicates the "What's New" message.
-        // - An index of 1 is used to promote the media player.
-        // - An index of 2 prompts the user to buy a coffee.
-        // If a message cannot be displayed for any reason, the index is incremented by 1 until the
-        // maximum index is reached.
-        lifecycleScope.launch {
-            if (delay > 0) delay(delay) // delay at least some
-            when (index) {
-                // What's new
-                0 -> showSnackbar(
-                    R.string.what_s_new_latest,
-                    duration = SnackbarDuration.Indefinite,
-                    icon = Icons.Outlined.NewReleases
-                )
-                // Media player
-                1 -> {
-                    val result = snackbarHostState.showSnackbar(
-                        message = resources.getText2(R.string.msg_media_player_promotion),
-                        icon = Icons.Outlined.GetApp,
-                        duration = SnackbarDuration.Indefinite,
-                        action = resources.getText2(R.string.get),
-                        accent = Color.Amber
-                    )
-                    if (result == SnackbarResult.ActionPerformed)
-                        launchAppStore("com.prime.player")
-                }
-                // Buy me a coffee.
-                2 -> {
-                    val purchase =
-                        paymaster.purchases.value.find() { it.id == Paymaster.IAP_BUY_ME_COFFEE }
-                    if (purchase.purchased)
-                        return@launch
-                    val result = snackbarHostState.showSnackbar(
-                        resources.getText2(R.string.msg_support_gallery),
-                        duration = SnackbarDuration.Indefinite,
-                        icon = Icons.Outlined.Coffee,
-                        action = getString(R.string.fuel)
-                    )
-                    if (result == SnackbarResult.ActionPerformed)
-                        initiatePurchaseFlow(Paymaster.IAP_BUY_ME_COFFEE)
-                }
-            }
-        }
-    }
+    override fun onDestinationChanged(cont: NavController, dest: NavDestination, args: Bundle?) = Unit
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -544,65 +364,8 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
         // Configure the splash screen for the app
         configSplashScreen()
         // Initialize
-        if (isColdStart) {
-            // Trigger update flow
-            initiateUpdateFlow()
-
-            // Enable secure mode if required by user settings
-            if (preferences[Settings.KEY_SECURE_MODE])
-                window.setFlags(LayoutParams.FLAG_SECURE, LayoutParams.FLAG_SECURE)
-
-            // Promote media player on every 5th launch
-            // TODO - properly handle promotional content.
-            lifecycleScope.launch {
-                // Show "What's New" message if the app version has changed
-                val versionCode = packageManager.getPackageInfoCompat(packageName)?.versionCode ?: 0
-                val savedVersionCode = preferences[KEY_APP_VERSION_CODE]
-                if (savedVersionCode != versionCode) {
-                    preferences[KEY_APP_VERSION_CODE] = versionCode
-                    showPromoToast(0) // What's new
-                    return@launch
-                }
-                // check if app is installed from market other than playstore.
-                if(!isInstalledFromPlayStore && isPlayStoreAvailable()){
-                    val res = snackbarHostState.showSnackbar(
-                        resources.getText2(R.string.msg_playstore_encouragement),
-                        duration = SnackbarDuration.Indefinite,
-                        icon = Icons.Outlined.Store,
-                        action = resources.getString(R.string.get)
-                    )
-                    if (res == SnackbarResult.ActionPerformed)
-                        launchAppStore("com.googol.android.apps.photos")
-                    return@launch
-                }
-                // Promotional messages are displayed only after the app has been launched
-                // more than 5 times (MIN_LAUNCHES_BEFORE_REVIEW).
-                // This ensures that users have had a chance to familiarize themselves with the app
-                // before being presented with these messages.
-                // An index of 0 is reserved for the "What's New" message and is handled separately.
-                // Promotional messages start with index 1.
-                // The index is calculated using the formula: (counter % MAX_PROMO_MESSAGES).coerceAtLeast(1).
-                // Each message is skipped by PROMO_SKIP_LAUNCHES number of launches.
-                val counter = preferences[Settings.KEY_LAUNCH_COUNTER]
-                if (counter < MIN_LAUNCHES_BEFORE_REVIEW)
-                    return@launch
-                val newCounter = counter - MIN_LAUNCHES_BEFORE_REVIEW
-                val interval = PROMO_SKIP_LAUNCHES + 1
-                // This line calculates which promotional message to show from a rotating set.
-                Log.d(
-                    TAG,
-                    "Promo(counter=$counter," +
-                            " interval=$interval," +
-                            " newCounter=$newCounter," +
-                            " skip = ${newCounter % interval}," +
-                            " index = ${(newCounter / interval) % MAX_PROMO_MESSAGES + 1} ) "
-                )
-                if (newCounter % interval == 0) {
-                    val index = (newCounter / interval) % MAX_PROMO_MESSAGES + 1
-                    Log.d(TAG, "onCreate: $index")
-                    showPromoToast(index)
-                }
-            }
+        if (isColdStart && preferences[Settings.KEY_SECURE_MODE]) {
+            window.setFlags(LayoutParams.FLAG_SECURE, LayoutParams.FLAG_SECURE)
         }
         // Set up the window to fit the system windows
         // This setting is usually configured in the app theme, but is ensured here
