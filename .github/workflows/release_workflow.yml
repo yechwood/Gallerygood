@@ -1,8 +1,8 @@
 name: CI/CD Pipeline
 on:
   push:
-    branches: # Change this to master once everything is setup.
-      - 'beta'
+    branches:
+      - 'master'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -63,19 +63,6 @@ jobs:
             ${{ runner.os }}-gradle-
 
 
-      - name: Configure Environment Variables
-        run: |
-          echo "DATE_TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PLAY_CONSOLE_APP_RSA_KEY=$(echo ${{ secrets.PLAY_CONSOLE_APP_RSA_KEY }})" >> $GITHUB_ENV
-          echo "ADS_APP_ID=$(echo ${{ secrets.ADS_APP_ID }})" >> $GITHUB_ENV
-          echo "GIT_TAG=$(grep -E "versionName\s*=?\s*['\"]" "app/build.gradle.kts" | awk -F"['\"]" '{print $2}')" >> $GITHUB_ENV
-
-      - name:  Validate Environment Variables
-        run: |
-          echo $ADS_APP_ID | sed 's/./&‌/g'
-          echo $PLAY_CONSOLE_APP_RSA_KEY | sed 's/./&‌/g'
-          echo $GIT_TAG | sed 's/./&‌/g'
-
       - name: Set Up Java and Gradle
         uses: actions/setup-java@v3
         with:
@@ -86,119 +73,8 @@ jobs:
       - name: Build App
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease bundleRelease \
-            --parallel \
-            --configure-on-demand \
-            --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
+          ./gradlew assembleCommunityRelease testCommunityRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
 
-      - name: Determine Build Tools Version
-        shell: bash
-        run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
-
-      # Sign Standard APK + AAB
-      - name: Signing Standard APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_standard_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/standard/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign COMMUNITY APK
-      - name: Signing Community APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_community_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/community/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign STANDARD AAB
-      - name: Signing Standard AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_standard_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/standardRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign COMMUNITY AAB
-      - name: Signing Community AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_community_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/communityRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign PLUS APK
-      - name: Signing PLUS APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_plus_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/plus/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign PLUS AAB
-      - name: Signing Plus AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_plus_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/plusRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.GIT_TAG }}
-          generate_release_notes: false
-          body: ${{ steps.notes.outputs.notes }}
-          prerelease: true
-          files: |
-            ${{steps.signed_standard_apk.outputs.signedReleaseFile}}
-            ${{steps.signed_standard_aab.outputs.signedReleaseFile}}
-            ${{steps.signed_community_apk.outputs.signedReleaseFile}}
-            ${{steps.signed_community_aab.outputs.signedReleaseFile}}
-
-      # Uploading Standard Signed AAB to internal track of PlayConsole
-      - name: Deploy to Play Store (Internal)
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.googol.android.apps.photos
-          releaseFiles: ${{steps.signed_standard_aab.outputs.signedReleaseFile}}
-          track: internal
-          whatsNewDirectory: ./whatsnew
 
       # Uploading Plus Signed AAB to internal track of PlayConsole
       - name: Deploy to Play Store (Internal)
