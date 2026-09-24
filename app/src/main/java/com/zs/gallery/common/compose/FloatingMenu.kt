@@ -85,6 +85,7 @@ fun FloatingActionMenu(
     insets: PaddingValues?= null,
     border: BorderStroke? = null,
     content: @Composable RowScope.() -> Unit,
+    plainWhite: Boolean = false,
 ) {
     val motion = AppTheme.motionScheme
     AnimatedVisibility(
@@ -94,9 +95,9 @@ fun FloatingActionMenu(
         exit = fadeOut(motion.fastEffectsSpec()) + slideOutVertically(motion.fastSpatialSpec()),
         content = {
             Surface(
-                background = background,
+                background = if (plainWhite) com.zs.compose.foundation.Background(androidx.compose.foundation.background(Color.White)) else background,
                 contentColor = contentColor,
-                elevation = 12.dp,
+                elevation = if (plainWhite) 0.dp else 12.dp,
                 shape = CircleShape,
                 border = border,
                 content = {
