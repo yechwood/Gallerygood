@@ -82,7 +82,6 @@ import com.zs.compose.foundation.ClaretViolet
 import com.zs.compose.foundation.OrientRed
 import com.zs.compose.foundation.SignalWhite
 import com.zs.compose.foundation.UmbraGrey
-import com.zs.compose.foundation.background
 import com.zs.compose.foundation.textResource
 import com.zs.compose.theme.AppTheme
 import com.zs.compose.theme.Colors
@@ -102,7 +101,6 @@ import com.zs.compose.theme.appbar.NavigationItem
 import com.zs.compose.theme.appbar.NavigationItemDefaults
 import com.zs.compose.theme.appbar.SideBar
 import com.zs.compose.theme.calculateWindowSizeClass
-import com.zs.compose.theme.dynamicAccentColor
 import com.zs.compose.theme.renderInSharedTransitionScopeOverlay
 import com.zs.compose.theme.snackbar.SnackbarHostState
 import com.zs.compose.theme.text.Label
@@ -116,12 +114,8 @@ import com.zs.gallery.common.WindowStyle
 import com.zs.gallery.common.compose.ContentPadding
 import com.zs.gallery.common.compose.LocalNavController
 import com.zs.gallery.common.compose.LocalSystemFacade
-import com.zs.gallery.common.compose.background
 import com.zs.gallery.common.compose.composable
 import com.zs.gallery.common.compose.preference
-import com.zs.gallery.common.compose.rememberAcrylicSurface
-import com.zs.gallery.common.compose.shine
-import com.zs.gallery.common.compose.source
 import com.zs.gallery.common.domain
 import com.zs.gallery.common.shapes.EndConcaveShape
 import com.zs.gallery.files.Files
@@ -146,7 +140,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState as Pe
 
 private const val TAG = "Home"
 
-private val LightAccentColor = /*Color(0xFF514700)*/ Color.ClaretViolet
+private val LightAccentColor = Color(0xFF1A73E8)
 private val DarkAccentColor = Color(0xFFD8A25E)
 
 private val SIDE_BAR_WIDTH = 100.dp
@@ -456,8 +450,8 @@ private fun NavigationBar(
             Surface (
                 contentColor = contentColor,
                 background = background,
-                elevation = 12.dp,
-                border = colors.shine,
+                elevation = 0.dp,
+                border = null,
                 shape = AppTheme.shapes.xLarge,
                 content = { Row(modifier = Modifier.padding(horizontal = ContentPadding.normal)) { routes() } },   // Display routes at the contre of available space
             )
@@ -532,7 +526,6 @@ fun Home(
     // Consider this scenario: a large screen that fits the mobile description, like a desktop screen in portrait mode.
     // In this case, maybe showing the BottomBar is preferable!
     val portrait = /*clazz.width < Category.Medium*/ true
-    val surface = rememberAcrylicSurface()
 
     // content
     val content = @Composable {
@@ -544,16 +537,11 @@ fun Home(
             progress = activity.inAppUpdateProgress,
             // Set up the navigation bar using the NavBar composable
             navBar = {
-                val useAccent by preference(Settings.KEY_USE_ACCENT_IN_NAV_BAR)
                 val colors = AppTheme.colors
                 NavigationBar(
                     portrait,
-                    when {
-                        useAccent -> Background(colors.accent)
-                        !portrait -> Background(colors.background(2.dp))
-                        else -> colors.background(surface)
-                    },
-                    if (useAccent) colors.onAccent else colors.onBackground,
+                    Background(colors.background),
+                    colors.onBackground,
                     navController,
                     Modifier.renderInSharedTransitionScopeOverlay(0.3f),
                 )
@@ -567,7 +555,7 @@ fun Home(
                     navController = navController,
                     startDestination = if (origin != RouteIntentViewer && !granted) RoutePermission() else origin(),
                     builder = navGraphBuilder,
-                    modifier = Modifier.source(surface),
+                    modifier = Modifier,
                     enterTransition = { scaleIn(motion.slowSpatialSpec(), 0.98f) + fadeIn(motion.slowEffectsSpec()) },
                     exitTransition = { fadeOut(motion.slowEffectsSpec()) },
                 )
@@ -586,24 +574,11 @@ fun Home(
 
     // Setup App Theme and provide necessary dependencies.
     // Provide the navController and window size class to child composable.
-    val useDynamicColors by activity.observeAsState(Settings.KEY_DYNAMIC_COLORS)
     val motionScheme = MotionScheme.expressive()
-    val accent = when {
-        useDynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicAccentColor(
-        activity,
-        isDark
-        )
-
-        isDark -> DarkAccentColor
-        else -> LightAccentColor
-    }
-    val background by animateColorAsState(
-        targetValue = when {
-            isDark -> applyTonalElevation(accent, Color.Black, 1.dp)
-            else -> applyTonalElevation(accent, Color.White, 4.dp)
-        },
-        animationSpec = motionScheme.slowEffectsSpec(), label = "background"
-    )
+    // The gallery uses a fixed Google-style blue accent in light mode and a stable dark-mode accent.
+    // Do not derive the light palette from wallpaper/dynamic colors: that was the source of the purple tint.
+    val accent = if (isDark) DarkAccentColor else LightAccentColor
+    val background = if (isDark) Color.Black else Color.White
 
     val primary2 by animateColorAsState(accent, motionScheme.defaultEffectsSpec(), "accent")
     val colors = Colors(
