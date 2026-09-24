@@ -84,7 +84,7 @@ import com.zs.gallery.common.compose.FloatingLargeTopAppBar
 import com.zs.gallery.common.compose.LocalNavController
 import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.OverflowMenu
-import com.zs.gallery.common.compose.background
+import androidx.compose.foundation.background
 import com.zs.gallery.common.compose.emit
 import com.zs.gallery.common.compose.preference
 import com.zs.gallery.common.compose.rememberAcrylicSurface
@@ -104,7 +104,7 @@ private val SelectionTracker.Level.toImageVector
         SelectionTracker.Level.PARTIAL -> Icons.Outlined.RemoveCircle
         SelectionTracker.Level.FULL -> Icons.Outlined.Verified
     }
-private val HeaderPadding = Padding(2.dp, 4.dp, 2.dp, 4.dp)
+private val HeaderPadding = Padding(4.dp, 8.dp, 4.dp, 8.dp)
 
 @Composable
 fun Files(viewState: FilesViewState) {
@@ -134,7 +134,7 @@ fun Files(viewState: FilesViewState) {
             val (icon, title) = viewState.meta
             FloatingLargeTopAppBar(
                 title = { Label(title, maxLines = 2) },
-                background = colors.background(surface),
+                background = Color.White,
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
                 navigationIcon = {
@@ -184,7 +184,7 @@ fun Files(viewState: FilesViewState) {
         floatingActionButton = {
             FloatingActionMenu(
                 visible = viewState.isInSelectionMode,
-                background = colors.background(surface),
+                background = Color.White,
                 contentColor = AppTheme.colors.onBackground,
                 modifier = Modifier.windowInsetsPadding(
                     (if (compact) inAppNavInsets else WindowInsets.None).union(WindowInsets.systemBars)
@@ -300,7 +300,7 @@ fun Files(viewState: FilesViewState) {
                         (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
-                    .source(surface)
+                     .background(Color.White)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
