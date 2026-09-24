@@ -18,7 +18,6 @@
 
 package com.zs.gallery.common.compose
 
-import androidx.compose.foundation.background as composeBackground
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -86,7 +85,6 @@ fun FloatingActionMenu(
     insets: PaddingValues?= null,
     border: BorderStroke? = null,
     content: @Composable RowScope.() -> Unit,
-    plainWhite: Boolean = false,
 ) {
     val motion = AppTheme.motionScheme
     AnimatedVisibility(
@@ -96,9 +94,9 @@ fun FloatingActionMenu(
         exit = fadeOut(motion.fastEffectsSpec()) + slideOutVertically(motion.fastSpatialSpec()),
         content = {
             Surface(
-                background = if (plainWhite) com.zs.compose.foundation.Background(composeBackground(Color.White)) else background,
+                background = background,
                 contentColor = contentColor,
-                elevation = if (plainWhite) 0.dp else 12.dp,
+                elevation = 12.dp,
                 shape = CircleShape,
                 border = border,
                 content = {
