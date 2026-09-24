@@ -84,6 +84,7 @@ import com.zs.gallery.common.compose.FloatingLargeTopAppBar
 import com.zs.gallery.common.compose.LocalNavController
 import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.OverflowMenu
+import com.zs.gallery.common.compose.background
 import com.zs.gallery.common.compose.emit
 import com.zs.gallery.common.compose.preference
 import com.zs.gallery.common.compose.rememberAcrylicSurface
@@ -133,6 +134,7 @@ fun Files(viewState: FilesViewState) {
             val (icon, title) = viewState.meta
             FloatingLargeTopAppBar(
                 title = { Label(title, maxLines = 2) },
+                background = colors.background(surface),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
                 navigationIcon = {
@@ -182,7 +184,7 @@ fun Files(viewState: FilesViewState) {
         floatingActionButton = {
             FloatingActionMenu(
                 visible = viewState.isInSelectionMode,
-                background = Color.White,
+                background = colors.background(surface),
                 contentColor = AppTheme.colors.onBackground,
                 modifier = Modifier.windowInsetsPadding(
                     (if (compact) inAppNavInsets else WindowInsets.None).union(WindowInsets.systemBars)
