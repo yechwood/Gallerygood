@@ -37,7 +37,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.PlayCircleFilled
-import androidx.compose.material.icons.outlined.ReplyAll
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
@@ -292,7 +292,7 @@ fun MediaViewer(viewState: MediaViewerViewState) {
                 provider = surface,
                 navigationIcon = {
                     IconButton(
-                        Icons.Outlined.ReplyAll,
+                        Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Back",
                         onClick = { onRequest(EVENT_BACK_PRESS) }
                     )
@@ -311,11 +311,11 @@ fun MediaViewer(viewState: MediaViewerViewState) {
             val actions = viewState.actions
             FloatingActionMenu(
                 visible = !immersive && !isLoading,
-                background = colors.background(surface, luminance = -1f),
+                background = com.zs.compose.foundation.Background(Color(0xFFF5F5F5)),
                 modifier = Modifier.windowInsetsPadding(
                     WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.End)
                 ),
-                border = colors.shine,
+                border = null,
                 content = {
                     OverflowMenu(
                         actions,
