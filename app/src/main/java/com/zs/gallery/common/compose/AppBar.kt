@@ -50,6 +50,7 @@ fun FloatingLargeTopAppBar(
     actions: @Composable() RowScope.() -> Unit = {},
     insets: WindowInsets = AppBarDefaults.topAppBarWindowInsets,
     style: TopAppBarStyle = AppBarDefaults.floatingLargeAppBarStyle(),
+    plainWhite: Boolean = false,
 ) = FloatingLargeTopAppBar(
     title = title,
     scrollBehavior = scrollBehavior,
@@ -63,11 +64,12 @@ fun FloatingLargeTopAppBar(
         val colors = AppTheme.colors
         Spacer(
             modifier = Modifier
-                .shadow(lerp(12.dp, 0.dp, fraction / .05f), AppBarDefaults.FloatingTopBarShape)
-                .thenIf(fraction == 0f) {
+                .thenIf(!plainWhite) { shadow(lerp(12.dp, 0.dp, fraction / .05f), AppBarDefaults.FloatingTopBarShape) }
+                .thenIf(!plainWhite && fraction == 0f) {
                     border(colors.shine, AppBarDefaults.FloatingTopBarShape)
                 }
-                .background(background)
+                .thenIf(plainWhite) { androidx.compose.foundation.background(Color.White) }
+                .thenIf(!plainWhite) { background(background) }
                 .fillMaxSize()
         )
     }
