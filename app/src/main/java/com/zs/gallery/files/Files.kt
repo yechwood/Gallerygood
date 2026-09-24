@@ -56,6 +56,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.zs.compose.foundation.Background
 import com.zs.compose.foundation.findActivity
 import com.zs.compose.foundation.stickyHeader
 import com.zs.compose.theme.AppTheme
@@ -88,7 +89,6 @@ import com.zs.gallery.common.compose.OverflowMenu
 import com.zs.gallery.common.compose.background
 import com.zs.gallery.common.compose.emit
 import com.zs.gallery.common.compose.preference
-import com.zs.gallery.common.compose.rememberAcrylicSurface
 import com.zs.gallery.common.compose.section
 import com.zs.gallery.common.compose.shine
 import com.zs.gallery.common.compose.source
@@ -121,7 +121,6 @@ fun Files(viewState: FilesViewState) {
     val inAppNavInsets = WindowInsets.content
     //
     val topAppBarScrollBehavior = AppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val surface = rememberAcrylicSurface()
     val colors = AppTheme.colors
     // actions
     val actions = viewState.actions
@@ -135,7 +134,7 @@ fun Files(viewState: FilesViewState) {
             val (icon, title) = viewState.meta
             FloatingLargeTopAppBar(
                 title = { Label(title, maxLines = 2) },
-                background = colors.background(surface),
+                background = Background(Color.White),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
                 plainWhite = true,
@@ -186,7 +185,7 @@ fun Files(viewState: FilesViewState) {
         floatingActionButton = {
             FloatingActionMenu(
                 visible = viewState.isInSelectionMode,
-                background = colors.background(surface),
+                background = Background(Color.White),
                 contentColor = Color(0xFF202124),
                 modifier = Modifier.windowInsetsPadding(
                     (if (compact) inAppNavInsets else WindowInsets.None).union(WindowInsets.systemBars)
