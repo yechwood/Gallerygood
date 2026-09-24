@@ -49,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -84,7 +83,6 @@ import com.zs.gallery.common.compose.FloatingLargeTopAppBar
 import com.zs.gallery.common.compose.LocalNavController
 import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.OverflowMenu
-import androidx.compose.foundation.background
 import com.zs.gallery.common.compose.emit
 import com.zs.gallery.common.compose.preference
 import com.zs.gallery.common.compose.rememberAcrylicSurface
@@ -134,7 +132,6 @@ fun Files(viewState: FilesViewState) {
             val (icon, title) = viewState.meta
             FloatingLargeTopAppBar(
                 title = { Label(title, maxLines = 2) },
-                background = colors.background(surface),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
                 navigationIcon = {
@@ -300,7 +297,6 @@ fun Files(viewState: FilesViewState) {
                         (Padding(end = if (!compact) 2.dp else 0.dp) + Padding(horizontal = 2.dp)),
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 content = content
             )
