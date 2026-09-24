@@ -18,6 +18,7 @@
 
 package com.zs.gallery.common.compose
 
+import androidx.compose.foundation.background as composeBackground
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -68,7 +69,7 @@ fun FloatingLargeTopAppBar(
                 .thenIf(!plainWhite && fraction == 0f) {
                     border(colors.shine, AppBarDefaults.FloatingTopBarShape)
                 }
-                .thenIf(plainWhite) { androidx.compose.foundation.background(Color.White) }
+                .thenIf(plainWhite) { composeBackground(Color.White) }
                 .thenIf(!plainWhite) { background(background) }
                 .fillMaxSize()
         )
