@@ -116,6 +116,7 @@ import com.zs.gallery.common.compose.LocalNavController
 import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.composable
 import com.zs.gallery.common.compose.preference
+import com.zs.gallery.common.compose.shine
 import com.zs.gallery.common.domain
 import com.zs.gallery.common.shapes.EndConcaveShape
 import com.zs.gallery.files.Files
