@@ -1,4 +1,5 @@
 name: Build APK
+# Rebuild after gallery background API fix
 
 on:
   push:
