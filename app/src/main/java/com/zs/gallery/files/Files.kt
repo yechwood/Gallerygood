@@ -138,6 +138,7 @@ fun Files(viewState: FilesViewState) {
                 background = colors.background(surface),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 scrollBehavior = topAppBarScrollBehavior,
+                plainWhite = true,
                 navigationIcon = {
                     val facade = LocalSystemFacade.current
                     when {
@@ -186,15 +187,16 @@ fun Files(viewState: FilesViewState) {
             FloatingActionMenu(
                 visible = viewState.isInSelectionMode,
                 background = colors.background(surface),
-                contentColor = AppTheme.colors.onBackground,
+                plainWhite = true,
+                contentColor = Color(0xFF202124),
                 modifier = Modifier.windowInsetsPadding(
                     (if (compact) inAppNavInsets else WindowInsets.None).union(WindowInsets.systemBars)
                         .only(WindowInsetsSides.Bottom + WindowInsetsSides.End)
                 ),
-                border = colors.shine,
+                border = null,
                 content = {
                     // Label
-                    Surface(color = AppTheme.colors.accent, shape = AppTheme.shapes.medium) {
+                    Surface(color = Color(0xFF1A73E8), shape = AppTheme.shapes.medium) {
                         Label(
                             text = "${viewState.selected.size}",
                             style = AppTheme.typography.title2,
@@ -247,7 +249,7 @@ fun Files(viewState: FilesViewState) {
                                 IconButton(
                                     icon = level.toImageVector,
                                     contentDescription = null,
-                                    tint = if (level == SelectionTracker.Level.FULL) AppTheme.colors.accent else LocalContentColor.current,
+                                    tint = if (level == SelectionTracker.Level.FULL) Color(0xFF1A73E8) else LocalContentColor.current,
                                     onClick = { viewState.select(header.toString()) }
                                 )
                             }
