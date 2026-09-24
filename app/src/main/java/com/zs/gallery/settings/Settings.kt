@@ -87,6 +87,7 @@ import com.zs.compose.foundation.textArrayResource
 import com.zs.compose.foundation.textResource
 import com.zs.compose.theme.AppTheme
 import com.zs.compose.theme.BaseListItem
+import com.zs.compose.foundation.Background
 import com.zs.compose.theme.Button
 import com.zs.compose.theme.ButtonDefaults
 import com.zs.compose.theme.Chip
@@ -124,8 +125,6 @@ import com.zs.gallery.common.compose.LocalSystemFacade
 import com.zs.gallery.common.compose.background
 import com.zs.gallery.common.compose.fadingEdge2
 import com.zs.gallery.common.compose.preference
-import com.zs.gallery.common.compose.rememberAcrylicSurface
-import com.zs.gallery.common.compose.source
 import androidx.compose.foundation.layout.PaddingValues as Padding
 import com.zs.gallery.common.compose.ContentPadding as CP
 
@@ -585,7 +584,6 @@ fun Settings(viewState: SettingsViewState) {
     }
     // obtain the padding of BottomNavBar/NavRail
     val inAppNavBarInsets = WindowInsets.content
-    val surface = rememberAcrylicSurface()
     val topAppBarScrollBehavior = AppBarDefaults.exitUntilCollapsedScrollBehavior()
     val colors = AppTheme.colors
 
@@ -597,7 +595,7 @@ fun Settings(viewState: SettingsViewState) {
             FloatingLargeTopAppBar(
                 title = { Label(textResource(R.string.settings)) },
                 scrollBehavior = topAppBarScrollBehavior,
-                background = colors.background(surface),
+                background = Background(Color.White),
                 insets = WindowInsets.systemBars.only(WindowInsetsSides.Top),
                 navigationIcon = {
                     Icon(
@@ -671,7 +669,7 @@ fun Settings(viewState: SettingsViewState) {
                         WindowInsetsSides.Vertical
                     )).asPaddingValues(),
                 modifier = Modifier
-                    .source(surface)
+                    .background(Color.White)
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                     .fadingEdge2(length = 56.dp),
                 content = {
