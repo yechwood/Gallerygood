@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // SECRETS
 // -----------------------------------------------------------------------------
 // 🔐 Keys or IDs injected into BuildConfig at runtime.
-private val secrets = arrayOf(/*"ADS_APP_ID",*/ "PLAY_CONSOLE_APP_RSA_KEY")
+private val secrets = emptyArray<String>()
 // -----------------------------------------------------------------------------
 // PLUGINS
 // -----------------------------------------------------------------------------
@@ -68,30 +68,14 @@ android {
 
         // 📌 Edition constants (used for comparison in code)
         buildConfigField("FLAVOR_COMMUNITY", "community")
-        buildConfigField("FLAVOR_STANDARD", "standard")
-        buildConfigField("FLAVOR_PLUS", "plus")
-        buildConfigField("FLAVOR_PREMIUM", "premium")
     }
     // -------------------------------------------------------------------------
     // PRODUCT FLAVORS
     // -------------------------------------------------------------------------
     flavorDimensions += "edition"
     productFlavors {
-        // STANDARD → Default monetized edition.
-        // PLUS + Ad SDK
-        create("standard") { dimension = "edition" }
-
-        // COMMUNITY → FOSS/open‑source build.
-        // Minimal free edition with no ads, no telemetry, and no purchases.
+        // Standalone build: no monetization, ads, telemetry, or Play Store features.
         create("community") { dimension = "edition" }
-
-        // PLUS → Privacy-friendly edition:
-        // No Ad SDK, but telemetry and in‑app purchases.
-        create("plus") { dimension = "edition" }
-
-        // PREMIUM → Full unlock build.
-        // Based on Community, but with all features enabled.
-        //create("premium") { dimension = "edition" }
     }
     // -------------------------------------------------------------------------
     // SOURCE SETS CONFIGURATION
@@ -158,20 +142,4 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.bundles.media3)
 
-    // Standard only
-    //"standardImplementation"(libs.bundles.play.services)
-    "standardImplementation"(libs.bundles.analytics)
-    "standardImplementation"(libs.google.billing.ktx)
-    // Play Services
-    "standardImplementation"(libs.play.app.update.ktx)
-    "standardImplementation"(libs.play.app.review.ktx)
-    // ads
-   // "standardImplementation"(libs.bundles.ads)
-    // Plus
-    "plusImplementation"(libs.bundles.analytics)
-    "plusImplementation"(libs.google.billing.ktx)
-    // Play Services
-    "plusImplementation"(libs.play.app.update.ktx)
-    "plusImplementation"(libs.play.app.review.ktx)
-    // no-ads
 }
