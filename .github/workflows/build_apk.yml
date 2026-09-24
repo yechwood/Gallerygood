@@ -1,5 +1,4 @@
 name: Build APK
-# Rebuild after gallery background API fix
 
 on:
   push:
@@ -26,9 +25,36 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:assembleStandardRelease --no-daemon --stacktrace
 
+      - name: Sign APK for direct installation
+        run: |
+          set -e
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/gallerygood-debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore ~/.android/gallerygood-debug.keystore \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          UNSIGNED="app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk"
+          SIGNED="app/build/outputs/apk/standard/release/Gallerygood-recovered.apk"
+          "$APKSIGNER" sign \
+            --ks ~/.android/gallerygood-debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out "$SIGNED" \
+            "$UNSIGNED"
+          "$APKSIGNER" verify --verbose "$SIGNED"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: gallerygood-beta-apk
-          path: app/build/outputs/apk/standard/release/*.apk
+          name: gallerygood-recovered-apk
+          path: app/build/outputs/apk/standard/release/Gallerygood-recovered.apk
           if-no-files-found: error
