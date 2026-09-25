@@ -226,14 +226,15 @@ private inline fun LazyListScope.General(
 
     // Google Photos Backup
     item(contentType = CONTENT_TYPE_ITEM) {
+        val context = LocalContext.current
         Preference(
             text = "Google Photos Backup",
             icon = Icons.Outlined.Share,
             modifier = Modifier
                 .background(AppTheme.colors.tileBackgroundColor, BottomTileShape)
                 .clickable {
-                    LocalContext.current.startActivity(
-                        Intent(LocalContext.current, GooglePhotosBackupActivity::class.java)
+                    context.startActivity(
+                        Intent(context, GooglePhotosBackupActivity::class.java)
                     )
                 }
         )
