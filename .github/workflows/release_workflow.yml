@@ -92,120 +92,39 @@ jobs:
             --no-daemon \
             -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
 
-      - name: Determine Build Tools Version
+      - name: Sign Standard APK for local distribution
         shell: bash
         run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
+          set -euo pipefail
+          APK="app/build/outputs/apk/standard/release/app-standard-release.apk"
+          OUT="app/build/outputs/apk/standard/release/Gallerygood-standard-release-signed.apk"
+          KEYSTORE="$RUNNER_TEMP/gallerygood-release.jks"
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE" \
+            -storetype JKS \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Gallerygood, OU=Android, O=Gallerygood, L=Unknown, ST=Unknown, C=US"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out "$OUT" \
+            "$APK"
+          "$APKSIGNER" verify --verbose "$OUT"
+          echo "Signed APK: $OUT"
+          sha256sum "$OUT"
 
-      # Sign Standard APK + AAB
-      - name: Signing Standard APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_standard_apk
+      - name: Upload Standard APK
+        uses: actions/upload-artifact@v4
         with:
-          releaseDirectory: app/build/outputs/apk/standard/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign COMMUNITY APK
-      - name: Signing Community APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_community_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/community/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign STANDARD AAB
-      - name: Signing Standard AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_standard_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/standardRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign COMMUNITY AAB
-      - name: Signing Community AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_community_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/communityRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign PLUS APK
-      - name: Signing PLUS APK
-        uses: r0adkll/sign-android-release@v1
-        id: signed_plus_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/plus/release/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      # Sign PLUS AAB
-      - name: Signing Plus AAB
-        uses: r0adkll/sign-android-release@v1
-        id: signed_plus_aab
-        with:
-          releaseDirectory: app/build/outputs/bundle/plusRelease/
-          signingKeyBase64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.GIT_TAG }}
-          generate_release_notes: false
-          body: ${{ steps.notes.outputs.notes }}
-          prerelease: true
-          files: |
-            ${{steps.signed_standard_apk.outputs.signedReleaseFile}}
-            ${{steps.signed_standard_aab.outputs.signedReleaseFile}}
-            ${{steps.signed_community_apk.outputs.signedReleaseFile}}
-            ${{steps.signed_community_aab.outputs.signedReleaseFile}}
-
-      # Uploading Standard Signed AAB to internal track of PlayConsole
-      - name: Deploy to Play Store (Internal)
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.googol.android.apps.photos
-          releaseFiles: ${{steps.signed_standard_aab.outputs.signedReleaseFile}}
-          track: internal
-          whatsNewDirectory: ./whatsnew
-
-      # Uploading Plus Signed AAB to internal track of PlayConsole
-      - name: Deploy to Play Store (Internal)
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.zs.android.apps.photos
-          releaseFiles: ${{steps.signed_plus_aab.outputs.signedReleaseFile}}
-          track: internal
-          whatsNewDirectory: ./whatsnew
+          name: Gallerygood-standard-release-apk
+          path: app/build/outputs/apk/standard/release/Gallerygood-standard-release-signed.apk
+          if-no-files-found: error
+          retention-days: 7
