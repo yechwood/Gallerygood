@@ -109,6 +109,12 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     var inAppUpdateProgress by mutableFloatStateOf(Float.NaN)
         private set
 
+    override fun authenticate(
+        subtitle: String?,
+        desc: String?,
+        onAuthenticated: () -> Unit,
+    ) = onAuthenticated()
+
     override fun showToast(message: String, duration: Int) =
         showPlatformToast(message, duration)
 
@@ -214,7 +220,7 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
             )
             // Manage lifecycle-related events and listeners
             DisposableEffect(Unit) {
-                Log.d(TAG, "onCreate - DisposableEffect: $timeAppWentToBackground")
+                Log.d(TAG, "onCreate - navigation ready")
                 navController.addOnDestinationChangedListener(this@MainActivity)
                 this@MainActivity.navController = navController
                 onDispose {
