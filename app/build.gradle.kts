@@ -177,6 +177,7 @@ dependencies {
     // AndroidX utilities
     implementation(libs.androidx.splashscreen)
     implementation(libs.androidx.startup)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.google.fonts)
     implementation(libs.google.play.services.auth)
