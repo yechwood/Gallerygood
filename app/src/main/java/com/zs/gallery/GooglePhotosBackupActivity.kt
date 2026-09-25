@@ -54,6 +54,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     private lateinit var accountButton: Button
     private lateinit var wifiSwitch: Switch
     private var signInOptions: GoogleSignInOptions? = null
+    private val backupPrefs by lazy { getSharedPreferences("google_photos_backup", Context.MODE_PRIVATE) }
 
     private val signInLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -136,6 +137,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
 
         val request = OneTimeWorkRequestBuilder<GooglePhotosBackupWorker>()
             .setConstraints(constraints)
+            .setInputData(Data.Builder().putBoolean("wifi_only", wifiSwitch.isChecked).build())
             .addTag(WORK_NAME)
             .build()
 
@@ -259,9 +261,9 @@ class GooglePhotosBackupActivity : ComponentActivity() {
             text = "Wi-Fi only"
             textSize = 16f
             setTextColor(AndroidColor.rgb(25, 28, 32))
-            isChecked = getPreferences(Context.MODE_PRIVATE).getBoolean("wifi_only", true)
+            isChecked = backupPrefs.getBoolean("wifi_only", true)
             setOnCheckedChangeListener { _, checked ->
-                getPreferences(Context.MODE_PRIVATE).edit().putBoolean("wifi_only", checked).apply()
+                backupPrefs.edit().putBoolean("wifi_only", checked).apply()
             }
         }
         backupCard.addView(wifiSwitch)
@@ -287,7 +289,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         backupCard.addView(backupButton)
         root.addView(backupCard, marginParams(12))
 
-        val lastBackup = getPreferences(Context.MODE_PRIVATE).getLong("last_backup", 0L)
+        val lastBackup = backupPrefs.getLong("last_backup", 0L)
         val lastCard = card()
         lastCard.addView(label("LAST BACKUP"))
         lastCard.addView(TextView(this).apply {
