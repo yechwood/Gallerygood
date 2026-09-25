@@ -22,6 +22,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import com.zs.gallery.GooglePhotosBackupActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -220,6 +221,21 @@ private inline fun LazyListScope.General(
                 color = AppTheme.colors.tileBackgroundColor,
                 CentreTileShape
             ),
+        )
+    }
+
+    // Google Photos Backup
+    item(contentType = CONTENT_TYPE_ITEM) {
+        Preference(
+            text = "Google Photos Backup",
+            icon = Icons.Outlined.Share,
+            modifier = Modifier
+                .background(AppTheme.colors.tileBackgroundColor, BottomTileShape)
+                .clickable {
+                    LocalContext.current.startActivity(
+                        Intent(LocalContext.current, GooglePhotosBackupActivity::class.java)
+                    )
+                }
         )
     }
 
