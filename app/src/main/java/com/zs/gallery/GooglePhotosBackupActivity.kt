@@ -77,6 +77,23 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
+        // Never silently request permission or launch a fragile system chooser.
+        // Give the user an immediate, visible choice and provide a direct route
+        // to Android's Google account settings when an account is not available.
+        AlertDialog.Builder(this)
+            .setTitle("Google Photos account")
+            .setMessage("Choose an existing Google account, or add a Google account to this device.")
+            .setPositiveButton("Choose existing") { _, _ ->
+                chooseExistingAccount()
+            }
+            .setNegativeButton("Add Google account") { _, _ ->
+                openGoogleAccountSettings()
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+
+    private fun chooseExistingAccount() {
         if (Build.VERSION.SDK_INT >= 23 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -85,6 +102,25 @@ class GooglePhotosBackupActivity : ComponentActivity() {
             return
         }
         showGoogleAccounts()
+    }
+
+    private fun openGoogleAccountSettings() {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_ADD_ACCOUNT).apply {
+                putExtra("account_types", arrayOf("com.google"))
+            }
+            startActivity(intent)
+            statusView.text = "Add your Google account, then return here."
+        } catch (_: ActivityNotFoundException) {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
+                statusView.text = "Open Accounts in Settings and add your Google account."
+            } catch (_: Exception) {
+                statusView.text = "Android account settings are unavailable on this device."
+            }
+        } catch (_: Exception) {
+            statusView.text = "Unable to open Google account settings."
+        }
     }
 
     private fun showGoogleAccounts() {
