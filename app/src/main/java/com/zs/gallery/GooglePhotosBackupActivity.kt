@@ -97,14 +97,47 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     }
 
     private fun chooseExistingAccount() {
-        if (Build.VERSION.SDK_INT >= 23 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(Manifest.permission.GET_ACCOUNTS), RC_ACCOUNTS)
-            statusView.text = "Allow account access to choose your Google account."
-            return
+        // On Android 8+ an app targeting modern SDKs cannot enumerate every
+        // Google account just by holding GET_ACCOUNTS. Account visibility is
+        // user-controlled. Ask AccountManager to choose an account instead;
+        // this flow can reveal an existing account to Gallerygood and avoids
+        // falsely reporting "no accounts" when the device already has one.
+        statusView.text = "Opening Google account chooser…"
+        try {
+            val manager = AccountManager.get(this)
+            manager.getAuthTokenByFeatures(
+                "com.google",
+                "oauth2:$PHOTOS_SCOPE",
+                null,
+                this,
+                null,
+                null,
+                { future ->
+                    try {
+                        val result = future.result
+                        val name = result.getString(AccountManager.KEY_ACCOUNT_NAME)
+                        if (!name.isNullOrBlank()) {
+                            selectedAccount = Account(name, "com.google")
+                            backupPrefs.edit().putString("account_name", name).apply()
+                            accountView.text = name
+                            accountButton.text = "Change account"
+                            statusView.text = "Google account selected. Tap Back up now to start."
+                            backupButton.isEnabled = true
+                        } else {
+                            statusView.text = "No Google account was selected."
+                            showAccountState()
+                        }
+                    } catch (_: Exception) {
+                        statusView.text = "Google account selection was cancelled or unavailable."
+                        showAccountState()
+                    }
+                },
+                null
+            )
+        } catch (_: Exception) {
+            statusView.text = "Unable to open the Google account chooser."
+            showAccountState()
         }
-        showGoogleAccounts()
     }
 
     private fun openGoogleAccountSettings() {
