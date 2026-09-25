@@ -95,8 +95,6 @@ private inline fun <S, O> Preferences.observeAsState(key: Key<S, O>): State<O?> 
  *        The progress value is a float between 0.0 and 1.0, indicating the percentage of the
  *        update that has been completed. The Float.NaN represents a default value when no update
  *        is going on.
- * @property timeAppWentToBackground The time in mills until the app was in background state. default value -1L
- * @property isAuthenticationRequired A boolean flag indicating whether authentication is required.
  */
 class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
 
