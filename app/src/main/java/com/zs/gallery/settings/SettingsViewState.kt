@@ -32,7 +32,6 @@ import com.zs.core.BuildConfig
 import com.zs.gallery.R
 import com.zs.gallery.common.NightMode
 import com.zs.gallery.common.Route
-import com.zs.gallery.settings.Settings.KEY_APP_LOCK_TIME_OUT
 import com.zs.gallery.settings.Settings.KEY_DYNAMIC_GALLERY
 import com.zs.gallery.settings.Settings.KEY_FAVOURITE_FILES
 import com.zs.gallery.settings.Settings.KEY_FONT_SCALE
@@ -146,17 +145,6 @@ interface SettingsViewState {
  *                           enabled, the app's content is obscured in the app preview,
  *                           enhancing privacy.
  * @property KEY_LAUNCH_COUNTER The counter counts the number of times this app was launched.
- * @property KEY_APP_LOCK_TIME_OUT Representing the timeout duration (in minutes) for app lock.
- * This preference determines how long the app can be in the background
- * before the user needs to authenticate to regain access.
- *
- * Possible values:
- *
- * - `-1`: App lock is disabled.
- * - `0`:  The app locks immediately when it enters the background.
- * - `1`:  The app locks after 1 minute in the background.
- * - `30`: The app locks after 30 minutes in the background.
- * - ... and so on.
  */
 object Settings {
     // The keys for the preferences
@@ -215,7 +203,6 @@ object Settings {
         booleanPreferenceKey(PREFIX + "_secure_gallery", defaultValue = false)
     val KEY_LAUNCH_COUNTER =
         intPreferenceKey(PREFIX + "_launch_counter", 0)
-    val KEY_APP_LOCK_TIME_OUT =
         intPreferenceKey("${PREFIX}_app_lock_time_out", -1)
     val KEY_USE_ACCENT_IN_NAV_BAR =
         booleanPreferenceKey("use_accent_in_nav_bar", false)
