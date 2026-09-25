@@ -490,7 +490,7 @@ class GooglePhotosBackupWorker(
             connection.outputStream.use { output -> input.copyTo(output, 64 * 1024) }
         }
         if (connection.responseCode !in 200..299)
-            throw IllegalStateException("Upload HTTP \${connection.responseCode}")
+            throw IllegalStateException("Upload HTTP ${connection.responseCode}")
         return connection.inputStream.bufferedReader().use { it.readText() }
     }
 
@@ -514,7 +514,7 @@ class GooglePhotosBackupWorker(
         }
         connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
         if (connection.responseCode !in 200..299)
-            throw IllegalStateException("Create media HTTP \${connection.responseCode}")
+            throw IllegalStateException("Create media HTTP ${connection.responseCode}")
         connection.inputStream.close()
     }
 
