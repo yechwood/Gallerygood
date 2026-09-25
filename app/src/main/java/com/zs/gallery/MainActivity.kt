@@ -21,11 +21,13 @@
 package com.zs.gallery
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager.LayoutParams
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
@@ -109,11 +111,14 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     var inAppUpdateProgress by mutableFloatStateOf(Float.NaN)
         private set
 
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun authenticate(
         subtitle: String?,
         desc: String?,
         onAuthenticated: () -> Unit,
     ) = onAuthenticated()
+
+    override fun unlock() = Unit
 
     override fun showToast(message: String, duration: Int) =
         showPlatformToast(message, duration)
