@@ -111,20 +111,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
     var inAppUpdateProgress by mutableFloatStateOf(Float.NaN)
         private set
 
-    /**
-     * Timestamp (mills) indicating when the app last went to the background.
-     *
-     * Possible values:
-     * - `-1L`: The app has just started and hasn't been in the background yet.
-     * - `0L`: The app was launched for the first time (initial launch).
-     * - `> 0L`: The time in milliseconds when the app last entered the background.
-     */
-    private var timeAppWentToBackground = -1L
-
-    override fun onDestroy() {
-        super.onDestroy()
-    }
-
     override fun showToast(message: String, duration: Int) =
         showPlatformToast(message, duration)
 
@@ -195,9 +181,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
         if (intent.action != Intent.ACTION_VIEW)
             return
         lifecycleScope.launch {
-            // we delay it here because on resume loads lockscreen.
-            // we want this to overlay over lockscreen; hence this.
-
             delay(200)
             navController?.navigate(RouteIntentViewer(intent.data!!, intent.type ?: "image/*")) {
                 launchSingleTop = true
@@ -223,14 +206,9 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
         // Set the content of the activity
         setContent {
             val navController = rememberNavController()
-            // If the action is VIEW, load the content first, regardless
-            // of whether the app is currently locked or not. This allows
-            // users to view shared media directly.
-            // else If authentication is required, move to the lock screen
             Home(
                 when {
                     intent.action == Intent.ACTION_VIEW -> RouteIntentViewer
-                    isAuthenticationRequired -> RouteLockScreen
                     else -> RouteFiles
                 },
                 snackbarHostState,
