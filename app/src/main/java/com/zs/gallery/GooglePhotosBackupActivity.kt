@@ -31,10 +31,10 @@ import androidx.work.WorkManager
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.Scope
+import android.accounts.Account
+import android.accounts.AccountManager
+import com.google.android.gms.auth.AccountPicker
+import com.google.android.gms.common.AccountPicker.AccountChooserOptions
 import java.text.DateFormat
 import java.util.Date
 
@@ -53,24 +53,34 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     private lateinit var backupButton: Button
     private lateinit var accountButton: Button
     private lateinit var wifiSwitch: Switch
-    private var signInOptions: GoogleSignInOptions? = null
+    private var selectedAccount: Account? = null
     private val backupPrefs by lazy { getSharedPreferences("google_photos_backup", Context.MODE_PRIVATE) }
 
-    private val signInLauncher =
+    private val accountPickerLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode != Activity.RESULT_OK || result.data == null) {
-                showAccountState()
-                return@registerForActivityResult
+            if (result.resultCode == Activity.RESULT_OK) {
+                val name = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+                if (!name.isNullOrBlank()) {
+                    selectedAccount = Account(name, "com.google")
+                    backupPrefs.edit().putString("account_name", name).apply()
+                    accountView.text = name
+                    accountButton.text = "Change account"
+                    statusView.text = "Google account selected. Tap Back up now to start."
+                    backupButton.isEnabled = true
+                    return@registerForActivityResult
+                }
             }
-            try {
-                GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                    .getResult(ApiException::class.java)
-                showAccountState()
-            } catch (_: ApiException) {
-                statusView.text = "Google account connection failed. Please try again."
-                backupButton.isEnabled = false
-            }
+            statusView.text = "No Google account was selected."
+            showAccountState()
         }
+
+    private fun chooseAccount() {
+        val options = AccountChooserOptions.Builder()
+            .setAllowableAccountsTypes(listOf("com.google"))
+            .setAlwaysPromptForAccount(true)
+            .build()
+        accountPickerLauncher.launch(AccountPicker.newChooseAccountIntent(options))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,51 +91,10 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         observeBackup()
     }
 
-    private fun googleOptions(): GoogleSignInOptions =
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestScopes(Scope(PHOTOS_SCOPE))
-            .build()
-
-    private fun connectAccount() {
-        val options = googleOptions()
-        signInOptions = options
-        signInLauncher.launch(GoogleSignIn.getClient(this, options).signInIntent)
-    }
-
-    private fun disconnectAccount() {
-        val options = signInOptions ?: googleOptions().also { signInOptions = it }
-        GoogleSignIn.getClient(this, options).signOut().addOnCompleteListener {
-            accountView.text = "Not connected"
-            statusView.text = "Connect a Google account to back up your photos and videos."
-            backupButton.isEnabled = false
-            accountButton.text = "Connect Google account"
-        }
-    }
-
-    private fun showAccountState() {
-        val account = GoogleSignIn.getLastSignedInAccount(this)
-        val connected = account?.account != null &&
-            account.grantedScopes?.any { it.scopeUri == PHOTOS_SCOPE } == true
-
-        if (connected) {
-            accountView.text = account?.email ?: "Google account connected"
-            statusView.text = "Ready to back up. Your account selection stays on this screen."
-            backupButton.isEnabled = true
-            accountButton.text = "Change account"
-        } else {
-            accountView.text = "Not connected"
-            statusView.text = "Connect a Google account to back up your photos and videos."
-            backupButton.isEnabled = false
-            accountButton.text = "Connect Google account"
-            connectAccount()
-        }
-    }
-
     private fun queueBackup() {
-        val account = GoogleSignIn.getLastSignedInAccount(this)?.account
+        val account = selectedAccount
         if (account == null) {
-            connectAccount()
+            chooseAccount()
             return
         }
 
@@ -243,7 +212,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         accountCard.addView(accountView)
         accountButton = Button(this).apply {
             text = "Connect Google account"
-            setOnClickListener { connectAccount() }
+            setOnClickListener { chooseAccount() }
         }
         accountCard.addView(accountButton)
         root.addView(accountCard, marginParams(12))
@@ -377,7 +346,8 @@ class GooglePhotosBackupWorker(
     override suspend fun doWork(): Result {
         setForeground(getForegroundInfo())
 
-        val account = GoogleSignIn.getLastSignedInAccount(applicationContext)?.account
+        val savedAccount = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("account_name", null)
+        val account = savedAccount?.let { Account(it, "com.google") }
             ?: return Result.failure(Data.Builder().putString("error", "Google account is not connected").build())
 
         return try {
