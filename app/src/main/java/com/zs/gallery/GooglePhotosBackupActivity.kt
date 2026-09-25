@@ -74,8 +74,8 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        val intent = Intent(AccountManager.ACTION_CHOOSE_ACCOUNT).apply {
-            putExtra(AccountManager.KEY_ACCOUNT_TYPES, arrayOf("com.google"))
+        val intent = Intent("android.accounts.action.CHOOSE_ACCOUNT").apply {
+            putExtra("account_types", arrayOf("com.google"))
         }
         accountPickerLauncher.launch(intent)
     }
