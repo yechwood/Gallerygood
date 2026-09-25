@@ -20,14 +20,8 @@
 
 package com.zs.gallery
 
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
-import android.hardware.biometrics.BiometricPrompt
-import android.os.Build
 import android.os.Bundle
-import android.os.CancellationSignal
 import android.util.Log
 import android.view.WindowManager.LayoutParams
 import androidx.activity.ComponentActivity
@@ -64,7 +58,6 @@ import com.zs.gallery.common.SystemFacade
 import com.zs.gallery.common.WindowStyle
 import com.zs.gallery.common.domain
 import com.zs.gallery.files.RouteFiles
-import com.zs.gallery.lockscreen.RouteLockScreen
 import com.zs.gallery.settings.Settings
 import com.zs.gallery.viewer.RouteIntentViewer
 import com.zs.preferences.Key
@@ -78,7 +71,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
-import kotlin.time.Duration.Companion.minutes
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen as configSplashScreen
 import androidx.navigation.NavController.OnDestinationChangedListener as NavDestListener
 
@@ -129,70 +121,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
      */
     private var timeAppWentToBackground = -1L
 
-    /**
-     * Checks if authentication is required.
-     *
-     * Authentication is not supported on Android versions below P.
-     *
-     * @return `true` if authentication should be shown, `false` otherwise.
-     */
-    private val isAuthenticationRequired: Boolean
-        get() {
-            // App lock is not supported on Android versions below P.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                return false
-            }
-
-            // If the timestamp is 0L, the user has recently unlocked the app,
-            // so authentication is not required.
-            if (timeAppWentToBackground == 0L) {
-                return false
-            }
-
-            // Check the app lock timeout setting.
-            return when (val timeoutValue = preferences[Settings.KEY_APP_LOCK_TIME_OUT]) {
-                -1 -> false // App lock is disabled (timeout value of -1)
-                0 -> true // Immediate authentication required (timeout value of 0)
-                else -> {
-                    // Calculate the time elapsed since the app went to background.
-                    val currentTime = System.currentTimeMillis()
-                    val timeSinceBackground = currentTime - timeAppWentToBackground
-                    timeSinceBackground >= timeoutValue.minutes.inWholeMilliseconds
-                }
-            }
-        }
-
-    override fun onPause() {
-        super.onPause()
-        // The time when app went to background.
-        // irrespective of what value it holds update it.
-        Log.d(TAG, "onPause")
-        timeAppWentToBackground = System.currentTimeMillis()
-    }
-
-    @SuppressLint("NewApi")
-    override fun onResume() {
-        super.onResume()
-        Log.d(TAG, "onStart")
-        // Only navigate to the lock screen if authentication is required and
-        // this is not a fresh app start.
-
-        // On a fresh start, timeAppWentToBackground is -1L.
-        // If authentication is required on a fresh start, the app will be
-        // automatically navigated to the lock screen in onCreate().
-        if (timeAppWentToBackground != -1L && isAuthenticationRequired) {
-            Log.d(TAG, "onResume: navigating -> RouteLockScreen.")
-            // since navController doesn't support adding new dest at the bottom of topMost dest;
-            // remove current destination to insert lock screen below
-            if (navController?.currentDestination?.domain == RouteIntentViewer.domain) {
-                navController?.popBackStack()
-            }
-            navController?.navigate(RouteLockScreen()) {
-                launchSingleTop = true
-            }
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
     }
@@ -205,84 +133,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
 
     override fun <T> getDeviceService(name: String): T =
         getSystemService(name) as T
-
-    @RequiresApi(Build.VERSION_CODES.P)
-    override fun authenticate(
-        subtitle: String?,
-        desc: String?,
-        onAuthenticated: () -> Unit,
-    ) {
-        Log.d(TAG, "preparing to show authentication dialog.")
-        // Build the BiometricPrompt
-        val prompt = BiometricPrompt.Builder(this).apply {
-            setTitle(getString(R.string.lock_scr_title))
-            if (subtitle != null) setSubtitle(subtitle)
-            if (desc != null) setDescription(desc)
-            // Set allowed authenticators for Android R and above
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-            // Allow device credential fallback for Android Q
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q)
-                setDeviceCredentialAllowed(true)
-            // On Android P and below, BiometricPrompt crashes if a negative button is not set.
-            // We provide a "Dismiss" button to avoid the crash, but this does not offer alternative
-            // authentication (like PIN).
-            // Future versions might include support for alternative authentication on older Android versions
-            // if a compatibility library or API becomes available.
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P)
-                setNegativeButton(getString(R.string.dismiss), mainExecutor, { _, _ -> })
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-                setConfirmationRequired(false)
-            /*if (Build.VERSION.SDK_INT >= 35) {
-                setLogoRes(R.drawable.ic_app)
-            }*/
-        }.build()
-        // Start the authentication process
-        prompt.authenticate(
-            CancellationSignal(),
-            mainExecutor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                // Implement callback methods for authentication events (success, error, etc.)
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
-                    onAuthenticated()
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    showToast(getString(R.string.msg_auth_failed))
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
-                    super.onAuthenticationError(errorCode, errString)
-                    showToast(getString(R.string.msg_auth_error_s, errString))
-                }
-            }
-        )
-    }
-
-    @SuppressLint("NewApi")
-    override fun unlock() = authenticate() {
-        val navController = navController ?: return@authenticate
-        // if it is initial app_lock update timeAppWentToBackground to 0
-        if (timeAppWentToBackground == -1L)
-            timeAppWentToBackground = 0L
-        // Check if the start destination needs to be updated
-        // Update the start destination to RouteTimeline
-        if (navController.graph.startDestinationRoute == RouteLockScreen()) {
-            Log.d(TAG, "unlock: updating start destination")
-            navController.graph.setStartDestination(RouteFiles())
-            navController.navigate(RouteFiles()) {
-                popUpTo(RouteLockScreen()) {
-                    inclusive = true
-                }
-            }
-            // return from here;
-            return@authenticate
-        }
-        Log.d(TAG, "unlock: poping lock_screen from graph")
-        // If the start destination is already RouteTimeline, just pop back
-        navController.popBackStack()
-    }
 
     override fun showSnackbar(
         message: CharSequence,
@@ -390,9 +240,6 @@ class MainActivity : ComponentActivity(), SystemFacade, NavDestListener {
             DisposableEffect(Unit) {
                 Log.d(TAG, "onCreate - DisposableEffect: $timeAppWentToBackground")
                 navController.addOnDestinationChangedListener(this@MainActivity)
-                // Cover the screen with lock_screen if authentication is required
-                // Only remove this veil when the user authenticates
-                if (isAuthenticationRequired) unlock()
                 this@MainActivity.navController = navController
                 onDispose {
                     navController.removeOnDestinationChangedListener(this@MainActivity)
