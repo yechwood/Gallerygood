@@ -19,7 +19,6 @@
 package com.zs.gallery.settings
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import com.zs.gallery.GooglePhotosBackupActivity
@@ -49,7 +48,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Recycling
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
@@ -84,7 +82,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.plus
-import com.zs.compose.foundation.textArrayResource
 import com.zs.compose.foundation.textResource
 import com.zs.compose.theme.AppTheme
 import com.zs.compose.theme.BaseListItem
@@ -167,8 +164,6 @@ private fun GroupHeader(
 )
 
 
-private val APP_LOCK_VALUES = arrayOf(-1, 0, 1, 30)
-
 private const val CONTENT_TYPE_HEADER = "header"
 private const val CONTENT_TYPE_ITEM = "item"
 
@@ -188,39 +183,6 @@ private inline fun LazyListScope.General(
             icon = Icons.Outlined.AutoAwesomeMotion,
             onCheckedChange = { viewState.set(Settings.KEY_DYNAMIC_GALLERY, it) },
             modifier = Modifier.background(AppTheme.colors.tileBackgroundColor, TopTileShape)
-        )
-    }
-
-    // AppLock
-    item(contentType = CONTENT_TYPE_ITEM) {
-        val facade = LocalSystemFacade.current
-        //
-        val value by preference(Settings.KEY_APP_LOCK_TIME_OUT)
-        val entries = textArrayResource(R.array.pref_app_lock_options)
-        DropDownPreference(
-            text = textResource(
-                R.string.pref_app_lock_s,
-                entries[APP_LOCK_VALUES.indexOf(value)]
-            ),
-            value = value,
-            icon = Icons.Default.LightMode,
-            entries = entries,
-            onRequestChange = { value ->
-                // User wishes to enable app lock
-                if (!facade.canAuthenticate()) {
-                    // If the user cannot authenticate, prompt them to enroll in biometric authentication
-                    return@DropDownPreference facade.enroll()
-                }
-                // Securely make sure that app_lock is set.
-                facade.authenticate((facade as Activity).getString(R.string.auth_confirm_biometric)) {
-                    viewState.set(Settings.KEY_APP_LOCK_TIME_OUT, value)
-                }
-            },
-            values = APP_LOCK_VALUES,
-            modifier = Modifier.background(
-                color = AppTheme.colors.tileBackgroundColor,
-                CentreTileShape
-            ),
         )
     }
 
