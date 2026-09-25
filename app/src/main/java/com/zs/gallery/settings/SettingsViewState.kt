@@ -203,7 +203,6 @@ object Settings {
         booleanPreferenceKey(PREFIX + "_secure_gallery", defaultValue = false)
     val KEY_LAUNCH_COUNTER =
         intPreferenceKey(PREFIX + "_launch_counter", 0)
-        intPreferenceKey("${PREFIX}_app_lock_time_out", -1)
     val KEY_USE_ACCENT_IN_NAV_BAR =
         booleanPreferenceKey("use_accent_in_nav_bar", false)
     val KEY_DYNAMIC_COLORS =
