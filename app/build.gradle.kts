@@ -179,6 +179,7 @@ dependencies {
     implementation(libs.androidx.startup)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.google.fonts)
+    implementation(libs.google.play.services.auth)
 
     // Compose extensions
     implementation(libs.telephoto.zoomable)
