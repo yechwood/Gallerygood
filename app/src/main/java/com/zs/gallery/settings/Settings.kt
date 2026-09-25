@@ -48,6 +48,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Recycling
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
@@ -82,6 +83,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.plus
+import com.zs.compose.foundation.textArrayResource
 import com.zs.compose.foundation.textResource
 import com.zs.compose.theme.AppTheme
 import com.zs.compose.theme.BaseListItem
