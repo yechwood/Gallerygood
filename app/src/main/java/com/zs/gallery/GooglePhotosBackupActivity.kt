@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color as AndroidColor
 import android.graphics.drawable.GradientDrawable
@@ -33,8 +34,6 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import android.accounts.Account
 import android.accounts.AccountManager
-import com.google.android.gms.auth.AccountPicker
-import com.google.android.gms.common.AccountPicker.AccountChooserOptions
 import java.text.DateFormat
 import java.util.Date
 
@@ -75,11 +74,27 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        val options = AccountChooserOptions.Builder()
-            .setAllowableAccountsTypes(listOf("com.google"))
-            .setAlwaysPromptForAccount(true)
-            .build()
-        accountPickerLauncher.launch(AccountPicker.newChooseAccountIntent(options))
+        val intent = Intent(AccountManager.ACTION_CHOOSE_ACCOUNT).apply {
+            putExtra(AccountManager.KEY_ACCOUNT_TYPES, arrayOf("com.google"))
+        }
+        accountPickerLauncher.launch(intent)
+    }
+
+    private fun showAccountState() {
+        val savedName = backupPrefs.getString("account_name", null)
+        if (!savedName.isNullOrBlank()) {
+            selectedAccount = Account(savedName, "com.google")
+            accountView.text = savedName
+            accountButton.text = "Change account"
+            backupButton.isEnabled = true
+            statusView.text = "Google account connected. Tap Back up now to start."
+        } else {
+            selectedAccount = null
+            accountView.text = "No Google account selected"
+            accountButton.text = "Connect Google account"
+            backupButton.isEnabled = false
+            statusView.text = "Choose a Google account to enable backup."
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
