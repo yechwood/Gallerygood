@@ -77,19 +77,22 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        // Never silently request permission or launch a fragile system chooser.
-        // Give the user an immediate, visible choice and provide a direct route
-        // to Android's Google account settings when an account is not available.
+        // Put both account actions directly in the account picker so the user
+        // never has to guess where "add existing account" lives.
+        showGoogleAccountActions()
+    }
+
+    private fun showGoogleAccountActions() {
         AlertDialog.Builder(this)
             .setTitle("Google Photos account")
-            .setMessage("Choose an existing Google account, or add a Google account to this device.")
-            .setPositiveButton("Choose existing") { _, _ ->
-                chooseExistingAccount()
+            .setItems(arrayOf("Choose existing Google account", "Add Google account to device")) { _, which ->
+                if (which == 0) {
+                    chooseExistingAccount()
+                } else {
+                    openGoogleAccountSettings()
+                }
             }
-            .setNegativeButton("Add Google account") { _, _ ->
-                openGoogleAccountSettings()
-            }
-            .setNeutralButton("Cancel", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -127,14 +130,25 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         try {
             val accounts = AccountManager.get(this).getAccountsByType("com.google")
             if (accounts.isEmpty()) {
-                statusView.text = "No Google accounts are available on this device."
+                AlertDialog.Builder(this)
+                    .setTitle("No Google accounts found")
+                    .setMessage("There isn't a Google account available to Gallerygood yet.")
+                    .setPositiveButton("Add Google account") { _, _ ->
+                        openGoogleAccountSettings()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
                 return
             }
+
             val names = accounts.map { it.name }.toTypedArray()
             val current = selectedAccount?.name
             AlertDialog.Builder(this)
                 .setTitle("Choose Google account")
-                .setSingleChoiceItems(names, names.indexOf(current).takeIf { it >= 0 } ?: -1) { dialog, which ->
+                .setSingleChoiceItems(
+                    names,
+                    names.indexOf(current).takeIf { it >= 0 } ?: -1
+                ) { dialog, which ->
                     val account = accounts[which]
                     selectedAccount = account
                     backupPrefs.edit().putString("account_name", account.name).apply()
@@ -143,6 +157,9 @@ class GooglePhotosBackupActivity : ComponentActivity() {
                     statusView.text = "Google account selected. Tap Back up now to start."
                     backupButton.isEnabled = true
                     dialog.dismiss()
+                }
+                .setPositiveButton("Add Google account") { _, _ ->
+                    openGoogleAccountSettings()
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
@@ -306,10 +323,16 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
         accountCard.addView(accountView)
         accountButton = Button(this).apply {
-            text = "Connect Google account"
+            text = "Choose Google account"
             setOnClickListener { chooseAccount() }
         }
         accountCard.addView(accountButton)
+
+        val addAccountButton = Button(this).apply {
+            text = "Add Google account to device"
+            setOnClickListener { openGoogleAccountSettings() }
+        }
+        accountCard.addView(addAccountButton)
         root.addView(accountCard, marginParams(12))
 
         val backupCard = card()
