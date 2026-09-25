@@ -38,6 +38,13 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         private const val BATCH_URL = "https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate"
     }
 
+    private lateinit var statusView: TextView
+    private lateinit var progressView: ProgressBar
+    private lateinit var progressText: TextView
+    private lateinit var backupButton: Button
+    private lateinit var wifiSwitch: Switch
+    private var backingUp = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildBackupUi()
@@ -65,7 +72,10 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
         try {
             val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-            account.account?.let(::startBackup) ?: finish()
+            if (account.account != null) {
+                updateStatus("Connected: " + (account.email ?: "Google account") + "\nReady to back up.")
+                backupButton.isEnabled = true
+            } else finish()
         } catch (e: ApiException) {
             Toast.makeText(this, "Google sign-in failed: " + e.statusCode, Toast.LENGTH_LONG).show()
             finish()
