@@ -27,6 +27,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.transformations
@@ -221,7 +223,21 @@ private fun Carousel(
                 modifier = Modifier
                     .fillMaxSize()
                     .thenIf(isFocused) {
-                        when {
+                        Modifier.pointerInput(zoomable.isZoomedOut) {
+                            if (!zoomable.isZoomedOut) return@pointerInput
+                            var totalDrag = 0f
+                            detectVerticalDragGestures(
+                                onVerticalDrag = { _, dragAmount ->
+                                    totalDrag += dragAmount
+                                },
+                                onDragEnd = {
+                                    if (totalDrag > 180f) onRequest(EVENT_BACK_PRESS)
+                                    totalDrag = 0f
+                                },
+                                onDragCancel = { totalDrag = 0f }
+                            )
+                        }.then(
+                            when {
                             item.isImage -> zModifier
                             else -> playIconModifier.clickable(null, null) {
                                 navController.navigate(
@@ -231,7 +247,7 @@ private fun Carousel(
                                     )
                                 )
                             }
-                        } then RouteFiles.sharedElement(viewState.focused)
+                        }) then RouteFiles.sharedElement(viewState.focused)
                     }
             )
         }
