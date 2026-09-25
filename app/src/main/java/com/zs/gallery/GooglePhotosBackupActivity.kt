@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
 import android.graphics.Color as AndroidColor
 import android.graphics.drawable.GradientDrawable
@@ -74,10 +75,15 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        val intent = Intent("android.accounts.action.CHOOSE_ACCOUNT").apply {
-            putExtra("account_types", arrayOf("com.google"))
+        val options = AccountChooserOptions.Builder()
+            .setAllowableAccountsTypes(listOf("com.google"))
+            .setAlwaysPromptForAccount(true)
+            .build()
+        try {
+            accountPickerLauncher.launch(AccountPicker.newChooseAccountIntent(options))
+        } catch (_: ActivityNotFoundException) {
+            statusView.text = "Google account chooser is unavailable on this device."
         }
-        accountPickerLauncher.launch(intent)
     }
 
     private fun showAccountState() {
