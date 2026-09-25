@@ -56,6 +56,10 @@
                 android:value="androidx.startup" />
         </provider>
         <activity
+            android:name=".GooglePhotosBackupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Gallery" />
+        <activity
             android:name=".AdminActivity"
             android:exported="false"
             android:theme="@style/Theme.Gallery"
