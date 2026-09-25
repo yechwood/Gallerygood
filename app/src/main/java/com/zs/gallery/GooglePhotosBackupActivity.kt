@@ -75,13 +75,18 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        val options = AccountChooserOptions.Builder()
-            .setAllowableAccountsTypes(listOf("com.google"))
-            .setAlwaysPromptForAccount(true)
-            .build()
-        try {
-            accountPickerLauncher.launch(AccountPicker.newChooseAccountIntent(options))
-        } catch (_: ActivityNotFoundException) {
+        val intent = AccountManager.newChooseAccountIntent(
+            selectedAccount,
+            null,
+            arrayOf("com.google"),
+            null,
+            null,
+            null,
+            null
+        )
+        if (intent.resolveActivity(packageManager) != null) {
+            accountPickerLauncher.launch(intent)
+        } else {
             statusView.text = "Google account chooser is unavailable on this device."
         }
     }
