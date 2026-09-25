@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.ActivityNotFoundException
@@ -43,6 +44,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         const val WORK_NAME = "google_photos_backup"
         const val CHANNEL_ID = "google_photos_backup"
         private const val RC_NOTIFICATION = 7402
+        private const val RC_ACCOUNTS = 7403
         private const val PHOTOS_SCOPE = "https://www.googleapis.com/auth/photoslibrary.appendonly"
     }
 
@@ -75,19 +77,50 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
 
     private fun chooseAccount() {
-        val intent = AccountManager.newChooseAccountIntent(
-            selectedAccount,
-            null,
-            arrayOf("com.google"),
-            null,
-            null,
-            null,
-            null
-        )
-        if (intent.resolveActivity(packageManager) != null) {
-            accountPickerLauncher.launch(intent)
-        } else {
-            statusView.text = "Google account chooser is unavailable on this device."
+        if (Build.VERSION.SDK_INT >= 23 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.GET_ACCOUNTS), RC_ACCOUNTS)
+            statusView.text = "Allow account access to choose your Google account."
+            return
+        }
+        showGoogleAccounts()
+    }
+
+    private fun showGoogleAccounts() {
+        try {
+            val accounts = AccountManager.get(this).getAccountsByType("com.google")
+            if (accounts.isEmpty()) {
+                statusView.text = "No Google accounts are available on this device."
+                return
+            }
+            val names = accounts.map { it.name }.toTypedArray()
+            val current = selectedAccount?.name
+            AlertDialog.Builder(this)
+                .setTitle("Choose Google account")
+                .setSingleChoiceItems(names, names.indexOf(current).takeIf { it >= 0 } ?: -1) { dialog, which ->
+                    val account = accounts[which]
+                    selectedAccount = account
+                    backupPrefs.edit().putString("account_name", account.name).apply()
+                    accountView.text = account.name
+                    accountButton.text = "Change account"
+                    statusView.text = "Google account selected. Tap Back up now to start."
+                    backupButton.isEnabled = true
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } catch (e: SecurityException) {
+            statusView.text = "Google account access was not granted."
+        } catch (e: Exception) {
+            statusView.text = "Unable to read Google accounts on this device."
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == RC_ACCOUNTS && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            showGoogleAccounts()
         }
     }
 
