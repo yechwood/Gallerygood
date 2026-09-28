@@ -196,7 +196,7 @@ private fun Carousel(
                     if (item.isImage) {
                         memoryCacheKey("${item.id}")
                         data(MediaProvider.buildContentUri(item.id))
-                        this.size(coil3.size.Size.ORIGINAL)
+                        this.size(2048)
                         preferCachedThumbnail(false)
                     } else data(item.mediaUri)
                 }.build(),
@@ -394,7 +394,7 @@ fun MediaViewer(viewState: MediaViewerViewState) {
                     contentScale = ContentScale.Fit,
                     model = ImageRequest(ctx)
                         .memoryCacheKey("${viewState.focused}")
-                        .size(coil3.size.Size.ORIGINAL)
+                        .size(2048)
                         .data(MediaProvider.buildContentUri(viewState.focused))
                         .preferCachedThumbnail(false)
                         .build(),
