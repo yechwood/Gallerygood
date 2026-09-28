@@ -97,47 +97,9 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     }
 
     private fun chooseExistingAccount() {
-        // On Android 8+ an app targeting modern SDKs cannot enumerate every
-        // Google account just by holding GET_ACCOUNTS. Account visibility is
-        // user-controlled. Ask AccountManager to choose an account instead;
-        // this flow can reveal an existing account to Gallerygood and avoids
-        // falsely reporting "no accounts" when the device already has one.
-        statusView.text = "Opening Google account chooser…"
-        try {
-            val manager = AccountManager.get(this)
-            manager.getAuthTokenByFeatures(
-                "com.google",
-                "oauth2:$PHOTOS_SCOPE",
-                null,
-                this,
-                null,
-                null,
-                { future ->
-                    try {
-                        val result = future.result
-                        val name = result.getString(AccountManager.KEY_ACCOUNT_NAME)
-                        if (!name.isNullOrBlank()) {
-                            selectedAccount = Account(name, "com.google")
-                            backupPrefs.edit().putString("account_name", name).apply()
-                            accountView.text = name
-                            accountButton.text = "Change account"
-                            statusView.text = "Google account selected. Tap Back up now to start."
-                            backupButton.isEnabled = true
-                        } else {
-                            statusView.text = "No Google account was selected."
-                            showAccountState()
-                        }
-                    } catch (_: Exception) {
-                        statusView.text = "Google account selection was cancelled or unavailable."
-                        showAccountState()
-                    }
-                },
-                null
-            )
-        } catch (_: Exception) {
-            statusView.text = "Unable to open the Google account chooser."
-            showAccountState()
-        }
+        // Use a local picker for accounts Android has made visible to Gallerygood.
+        // This avoids the unreliable auth-token chooser callback on some devices.
+        showGoogleAccounts()
     }
 
     private fun openGoogleAccountSettings() {
@@ -164,45 +126,57 @@ class GooglePhotosBackupActivity : ComponentActivity() {
             val accounts = AccountManager.get(this).getAccountsByType("com.google")
             if (accounts.isEmpty()) {
                 AlertDialog.Builder(this)
-                    .setTitle("No Google accounts found")
-                    .setMessage("There isn't a Google account available to Gallerygood yet.")
-                    .setPositiveButton("Add Google account") { _, _ ->
-                        openGoogleAccountSettings()
-                    }
+                    .setTitle("No Google accounts available")
+                    .setMessage("Android is not currently exposing a Google account to Gallerygood.")
+                    .setPositiveButton("Add Google account") { _, _ -> openGoogleAccountSettings() }
                     .setNegativeButton("Cancel", null)
                     .show()
                 return
             }
-
-            val names = accounts.map { it.name }.toTypedArray()
-            val current = selectedAccount?.name
-            AlertDialog.Builder(this)
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(20), dp(4), dp(20), dp(8))
+            }
+            val currentName = selectedAccount?.name ?: backupPrefs.getString("account_name", null)
+            val dialog = AlertDialog.Builder(this)
                 .setTitle("Choose Google account")
-                .setSingleChoiceItems(
-                    names,
-                    names.indexOf(current).takeIf { it >= 0 } ?: -1
-                ) { dialog, which ->
-                    val account = accounts[which]
-                    selectedAccount = account
-                    backupPrefs.edit().putString("account_name", account.name).apply()
-                    accountView.text = account.name
-                    accountButton.text = "Change account"
-                    statusView.text = "Google account selected. Tap Back up now to start."
-                    backupButton.isEnabled = true
-                    dialog.dismiss()
-                }
-                .setPositiveButton("Add Google account") { _, _ ->
-                    openGoogleAccountSettings()
-                }
+                .setView(container)
                 .setNegativeButton("Cancel", null)
-                .show()
-        } catch (e: SecurityException) {
+                .create()
+            accounts.forEach { account ->
+                val row = TextView(this).apply {
+                    text = if (account.name == currentName) "✓  ${account.name}" else account.name
+                    textSize = 17f
+                    setTextColor(AndroidColor.rgb(25, 28, 32))
+                    setGravity(Gravity.CENTER_VERTICAL)
+                    setPadding(dp(16), dp(14), dp(16), dp(14))
+                    background = GradientDrawable().apply {
+                        setColor(if (account.name == currentName) AndroidColor.rgb(232, 240, 254) else AndroidColor.TRANSPARENT)
+                        cornerRadius = dp(14).toFloat()
+                    }
+                    setOnClickListener {
+                        selectedAccount = account
+                        backupPrefs.edit().putString("account_name", account.name).apply()
+                        accountView.text = account.name
+                        accountButton.text = "Change Google account"
+                        statusView.text = "Google account selected. Tap Back up now to start."
+                        backupButton.isEnabled = true
+                        dialog.dismiss()
+                    }
+                }
+                container.addView(row, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(6) })
+            }
+            container.addView(Button(this).apply {
+                text = "Add another Google account"
+                setOnClickListener { dialog.dismiss(); openGoogleAccountSettings() }
+            }, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(6) })
+            dialog.show()
+        } catch (_: SecurityException) {
             statusView.text = "Google account access was not granted."
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             statusView.text = "Unable to read Google accounts on this device."
         }
     }
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == RC_ACCOUNTS && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
