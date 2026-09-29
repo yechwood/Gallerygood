@@ -1,7 +1,6 @@
 package com.zs.gallery
 
 import android.Manifest
-import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.AlertDialog
@@ -22,6 +21,10 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
@@ -34,8 +37,6 @@ import androidx.work.WorkManager
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import android.accounts.Account
-import android.accounts.AccountManager
 import java.text.DateFormat
 import java.util.Date
 
@@ -44,7 +45,6 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         const val WORK_NAME = "google_photos_backup"
         const val CHANNEL_ID = "google_photos_backup"
         private const val RC_NOTIFICATION = 7402
-        private const val RC_ACCOUNTS = 7403
         private const val PHOTOS_SCOPE = "https://www.googleapis.com/auth/photoslibrary.appendonly"
     }
 
@@ -55,30 +55,27 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     private lateinit var backupButton: Button
     private lateinit var accountButton: Button
     private lateinit var wifiSwitch: Switch
-    private var selectedAccount: Account? = null
     private val backupPrefs by lazy { getSharedPreferences("google_photos_backup", Context.MODE_PRIVATE) }
 
-    private val accountPickerLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                val name = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-                if (!name.isNullOrBlank()) {
-                    selectedAccount = Account(name, "com.google")
-                    backupPrefs.edit().putString("account_name", name).apply()
-                    accountView.text = name
-                    accountButton.text = "Change account"
-                    statusView.text = "Google account selected. Tap Back up now to start."
-                    backupButton.isEnabled = true
-                    return@registerForActivityResult
+    private val authorizationLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            try {
+                val authorization = Identity.getAuthorizationClient(this)
+                    .getAuthorizationResultFromIntent(result.data)
+                val token = authorization.accessToken
+                if (result.resultCode == android.app.Activity.RESULT_OK && !token.isNullOrBlank()) {
+                    saveAuthorization(token)
+                } else {
+                    statusView.text = "Google Photos permission was not granted. Tap Connect Google account to try again."
+                    showAccountState()
                 }
+            } catch (e: Exception) {
+                statusView.text = "Google authorization failed: " + (e.localizedMessage ?: "please try again")
+                showAccountState()
             }
-            statusView.text = "No Google account was selected."
-            showAccountState()
         }
 
     private fun chooseAccount() {
-        // Put both account actions directly in the account picker so the user
-        // never has to guess where "add existing account" lives.
         showGoogleAccountActions()
     }
 
@@ -87,7 +84,7 @@ class GooglePhotosBackupActivity : ComponentActivity() {
             .setTitle("Google Photos account")
             .setItems(arrayOf("Choose existing Google account", "Add Google account to device")) { _, which ->
                 if (which == 0) {
-                    chooseExistingAccount()
+                    authorizeGooglePhotos()
                 } else {
                     openGoogleAccountSettings()
                 }
@@ -96,10 +93,42 @@ class GooglePhotosBackupActivity : ComponentActivity() {
             .show()
     }
 
-    private fun chooseExistingAccount() {
-        // Use a local picker for accounts Android has made visible to Gallerygood.
-        // This avoids the unreliable auth-token chooser callback on some devices.
-        showGoogleAccounts()
+    /** Use Google Play services' OAuth authorization UI, including account selection and consent. */
+    private fun authorizeGooglePhotos() {
+        statusView.text = "Opening Google authorization…"
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(PHOTOS_SCOPE)))
+            .build()
+        Identity.getAuthorizationClient(this).authorize(request)
+            .addOnSuccessListener { authorization ->
+                if (authorization.hasResolution() && authorization.pendingIntent != null) {
+                    try {
+                        authorizationLauncher.launch(
+                            IntentSenderRequest.Builder(authorization.pendingIntent!!.intentSender).build()
+                        )
+                    } catch (e: Exception) {
+                        statusView.text = "Could not open Google authorization: " + (e.localizedMessage ?: "try again")
+                    }
+                } else {
+                    val token = authorization.accessToken
+                    if (!token.isNullOrBlank()) saveAuthorization(token)
+                    else statusView.text = "Google did not return an access token. Try connecting again."
+                }
+            }
+            .addOnFailureListener { error ->
+                statusView.text = "Google authorization failed: " + (error.localizedMessage ?: "try again")
+            }
+    }
+
+    private fun saveAuthorization(token: String) {
+        backupPrefs.edit()
+            .putString("access_token", token)
+            .putString("account_name", "Google Photos authorized")
+            .apply()
+        accountView.text = "Google Photos connected"
+        accountButton.text = "Change Google account"
+        statusView.text = "Google Photos access granted. Tap Back up now to start."
+        backupButton.isEnabled = true
     }
 
     private fun openGoogleAccountSettings() {
@@ -121,83 +150,18 @@ class GooglePhotosBackupActivity : ComponentActivity() {
         }
     }
 
-    private fun showGoogleAccounts() {
-        try {
-            val accounts = AccountManager.get(this).getAccountsByType("com.google")
-            if (accounts.isEmpty()) {
-                AlertDialog.Builder(this)
-                    .setTitle("No Google accounts available")
-                    .setMessage("Android is not currently exposing a Google account to Gallerygood.")
-                    .setPositiveButton("Add Google account") { _, _ -> openGoogleAccountSettings() }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-                return
-            }
-            val container = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(20), dp(4), dp(20), dp(8))
-            }
-            val currentName = selectedAccount?.name ?: backupPrefs.getString("account_name", null)
-            val dialog = AlertDialog.Builder(this)
-                .setTitle("Choose Google account")
-                .setView(container)
-                .setNegativeButton("Cancel", null)
-                .create()
-            accounts.forEach { account ->
-                val row = TextView(this).apply {
-                    text = if (account.name == currentName) "✓  ${account.name}" else account.name
-                    textSize = 17f
-                    setTextColor(AndroidColor.rgb(25, 28, 32))
-                    setGravity(Gravity.CENTER_VERTICAL)
-                    setPadding(dp(16), dp(14), dp(16), dp(14))
-                    background = GradientDrawable().apply {
-                        setColor(if (account.name == currentName) AndroidColor.rgb(232, 240, 254) else AndroidColor.TRANSPARENT)
-                        cornerRadius = dp(14).toFloat()
-                    }
-                    setOnClickListener {
-                        selectedAccount = account
-                        backupPrefs.edit().putString("account_name", account.name).apply()
-                        accountView.text = account.name
-                        accountButton.text = "Change Google account"
-                        statusView.text = "Google account selected. Tap Back up now to start."
-                        backupButton.isEnabled = true
-                        dialog.dismiss()
-                    }
-                }
-                container.addView(row, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(6) })
-            }
-            container.addView(Button(this).apply {
-                text = "Add another Google account"
-                setOnClickListener { dialog.dismiss(); openGoogleAccountSettings() }
-            }, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(6) })
-            dialog.show()
-        } catch (_: SecurityException) {
-            statusView.text = "Google account access was not granted."
-        } catch (_: Exception) {
-            statusView.text = "Unable to read Google accounts on this device."
-        }
-    }
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == RC_ACCOUNTS && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            showGoogleAccounts()
-        }
-    }
-
     private fun showAccountState() {
-        val savedName = backupPrefs.getString("account_name", null)
-        if (!savedName.isNullOrBlank()) {
-            selectedAccount = Account(savedName, "com.google")
-            accountView.text = savedName
-            accountButton.text = "Change account"
+        val token = backupPrefs.getString("access_token", null)
+        if (!token.isNullOrBlank()) {
+            accountView.text = "Google Photos connected"
+            accountButton.text = "Change Google account"
             backupButton.isEnabled = true
-            statusView.text = "Google account connected. Tap Back up now to start."
+            statusView.text = "Google Photos access granted. Tap Back up now to start."
         } else {
-            selectedAccount = null
-            accountView.text = "No Google account selected"
+            accountView.text = "Not connected to Google Photos"
             accountButton.text = "Connect Google account"
             backupButton.isEnabled = false
-            statusView.text = "Choose a Google account to enable backup."
+            statusView.text = "Connect and authorize a Google account to enable backup."
         }
     }
 
@@ -211,8 +175,8 @@ class GooglePhotosBackupActivity : ComponentActivity() {
     }
 
     private fun queueBackup() {
-        val account = selectedAccount
-        if (account == null) {
+        val token = backupPrefs.getString("access_token", null)
+        if (token.isNullOrBlank()) {
             chooseAccount()
             return
         }
@@ -225,7 +189,10 @@ class GooglePhotosBackupActivity : ComponentActivity() {
 
         val request = OneTimeWorkRequestBuilder<GooglePhotosBackupWorker>()
             .setConstraints(constraints)
-            .setInputData(Data.Builder().putBoolean("wifi_only", wifiSwitch.isChecked).build())
+            .setInputData(Data.Builder()
+                .putBoolean("wifi_only", wifiSwitch.isChecked)
+                .putString("access_token", token)
+                .build())
             .addTag(WORK_NAME)
             .build()
 
@@ -471,20 +438,14 @@ class GooglePhotosBackupWorker(
     override suspend fun doWork(): Result {
         setForeground(getForegroundInfo())
 
-        val savedAccount = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("account_name", null)
-        val account = savedAccount?.let { Account(it, "com.google") }
-            ?: return Result.failure(Data.Builder().putString("error", "Google account is not connected").build())
+        val token = inputData.getString("access_token")
+            ?: return Result.failure(Data.Builder().putString("error", "Connect and authorize Google Photos first").build())
 
         return try {
-            val token = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.google.android.gms.auth.GoogleAuthUtil.getToken(
-                    applicationContext, account, "oauth2:$PHOTOS_SCOPE"
-                )
-            }
 
             val items = queryMedia()
             val prefs = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val uploadedKey = UPLOADED_PREFIX + (account.name ?: "unknown")
+            val uploadedKey = UPLOADED_PREFIX + "authorized_account"
             val uploaded = prefs.getStringSet(uploadedKey, emptySet())?.toMutableSet() ?: mutableSetOf()
             var processed = 0
             var newlyUploaded = 0
