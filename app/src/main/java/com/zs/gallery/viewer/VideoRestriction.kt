@@ -5,7 +5,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 
 object VideoRestriction {
-    const val DEFAULT_MAX_MS = 5 * 60 * 1000L
+    const val DEFAULT_MAX_MS = 2 * 60 * 1000L
     const val PREFS = "gallery_guard"
 
     data class Result(val allowed: Boolean, val durationMs: Long, val limitMs: Long)
